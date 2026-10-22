@@ -59,6 +59,10 @@ rm -rf "$work/lab/www"
 expect fail "no build output to inspect" --draft
 
 fresh
+echo '{{ .Values.missing.key }}' >> "$work/lab/automation/argocd/templates/applications.yaml"
+expect fail "chart that does not render" --draft
+
+fresh
 sed -i.bak '/^== Evidence checkpoint$/d' "$page" && rm "$page.bak"
 expect fail "module without Evidence checkpoint" --draft
 

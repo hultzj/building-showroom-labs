@@ -27,17 +27,27 @@ cat > "$fake/oc" <<'SH'
 #!/usr/bin/env bash
 case "$*" in
   *applications.argoproj.io*) printf '%b' "$FAKE_APPS" ;;
-  *route*) printf 'showroom.example.test' ;;
+  *route*) [[ -n ${FAKE_NO_ROUTE:-} ]] && exit 1; printf 'showroom.example.test' ;;
 esac
 SH
-printf '#!/usr/bin/env bash\nexit 0\n' > "$fake/curl"
+printf '#!/usr/bin/env bash\nexit "${FAKE_CURL_RC:-0}"\n' > "$fake/curl"
 chmod +x "$fake/oc" "$fake/curl"
-run_verify() { FAKE_APPS=$1 PATH="$fake:$PATH" LAB_NS=ns bash "$SCAFFOLD/automation/verify.sh" >/dev/null 2>&1; }
-run_verify 'lab Synced/Healthy\nlab-showroom Synced/Healthy\nlab-prereqs Synced/Healthy\n' \
+run_verify() { FAKE_APPS=$1 PATH="$fake:$PATH" LAB_NS=ns LAB_APP=lab bash "$SCAFFOLD/automation/verify.sh" >/dev/null 2>&1; }
+healthy='lab Synced/Healthy\nlab-showroom Synced/Healthy\nlab-prereqs Synced/Healthy\n'
+run_verify "$healthy" \
   && ok "verify passes with every Application Synced/Healthy" || bad "verify passes with every Application Synced/Healthy"
 run_verify 'lab-showroom Synced/Healthy\n' \
   && bad "verify fails when the prereqs Application is missing" || ok "verify fails when the prereqs Application is missing"
 run_verify 'lab-showroom Synced/Healthy\nlab-prereqs OutOfSync/Healthy\n' \
   && bad "verify fails when an Application is OutOfSync" || ok "verify fails when an Application is OutOfSync"
+run_verify 'other-showroom Synced/Healthy\nother-prereqs Synced/Healthy\n' \
+  && bad "verify fails when only another lab's Applications exist" || ok "verify fails when only another lab's Applications exist"
+FAKE_NO_ROUTE=1 run_verify "$healthy" \
+  && bad "verify fails when the Showroom route is missing" || ok "verify fails when the Showroom route is missing"
+FAKE_CURL_RC=22 run_verify "$healthy" \
+  && bad "verify fails when the Showroom route does not answer" || ok "verify fails when the Showroom route does not answer"
+
+# Every image the Showroom child runs is pinned by digest, not a moving tag.
+grep -q 'image: .*@sha256:' <<<"$apps" && ok "Showroom terminal image is digest-pinned" || bad "Showroom terminal image is digest-pinned"
 
 exit "$errors"
