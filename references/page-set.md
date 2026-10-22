@@ -43,7 +43,7 @@ the filled-in skeleton. Its parts, in order:
 
 - Participant commands: `[source,bash,role="execute",subs="attributes+"]`. Showroom adds a click-to-run button to `role="execute"` blocks.
 - Every block that shows a lab name uses `subs="attributes+"`, including non-execute blocks. Without it `{name}` renders literally with no warning; `check-lab.sh` catches that in `www/`.
-- With `subs="attributes+"`, `{word}` (letters, digits, `_`, `-`) is an attribute reference. Write shell variables as `$VAR`, never `${VAR}`. Escape only word-shaped braces: `'%\{http_code}'`, jsonpath `\{end}`, regex `x\{64}`. Leave every other brace alone (`{.items[*]}`, `{"\n"}`, `{}`), because Asciidoctor keeps a backslash there and the participant's command breaks. The build fails on a missing attribute, and `check-lab.sh` fails on a surviving `\{`.
+- With `subs="attributes+"`, `{word}` (letters, digits, `_`, `-`) is an attribute reference. Write shell variables as `$VAR`, never `${NAME}` with a word-shaped name (`${B:+$B-}` and `${#X}` are fine). Escape only word-shaped braces: `'%\{http_code}'`, jsonpath `\{end}`, regex `x\{64}`. Leave every other brace alone (`{.items[*]}`, `{"\n"}`, `{}`), because Asciidoctor keeps a backslash there and the participant's command breaks. The build fails on a missing attribute, and `check-lab.sh` fails on a surviving `\{`.
 - Heredocs containing `$(…)` that the shell must not expand (Tekton params, scripts) use `<<'EOF'`.
 - Long waits, PID-checked kills and full scripted checks go in `[%collapsible]` blocks so the main path stays short.
 - Participants paste scripted assertions into their own shell, so wrap each one in `( ... )`: an `exit 1` on FAIL then ends the subshell, not their terminal session. End with `echo PASS`.
