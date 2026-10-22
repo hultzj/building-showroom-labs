@@ -11,7 +11,7 @@ A lab is three things that must agree: the **guide** (Antora pages Showroom rend
 
 ## Workflow — create a todo per step
 
-1. **Intake.** Ask for whatever is missing: topic and audience; the customer question each module answers; products and pinned versions; tracks and time budget; the test cluster; the public git repo URL Argo CD will sync. Then settle the environment with `references/environments.md`: RHDP order or pre-existing cluster, GitOps-built or participant-built, dedicated or shared. That fixes the participant identity.
+1. **Intake.** Ask for whatever is missing: topic and audience; the customer question each module answers; products and pinned versions; tracks and time budget; the test cluster; the public git repo URL Argo CD will sync. Then settle the environment with `references/environments.md`: RHDP order or pre-existing cluster, GitOps-built or participant-built, dedicated (the default) or shared. That fixes the participant identity.
 2. **Scaffold.** In a new git repo (Antora reads content only from git): `cp -R <this skill>/assets/scaffold/. .`, then `npm install`.
 3. **Plan.** Fill `PLAN.md`. If the lab's question names a path (egress, an API, another tenant), the plan exercises that path. Get the user's OK.
 4. **Write pages.** Follow `references/page-set.md`. Every exercise and every `role="execute"` block gets `Expected result:` plus `// UNVERIFIED` until you have seen the result live.

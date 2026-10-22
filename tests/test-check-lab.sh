@@ -72,7 +72,9 @@ expect fail "mermaid block (Showroom's builder has no extensions)" --draft
 
 fresh
 rm -rf "$work/lab/automation/argocd/components"
-expect pass "chart with no components (participant-built lab)" --draft
+expect fail "deleted component still referenced by the parent chart" --draft
+printf '\nprereqs:\n  enabled: false\n' >> "$work/lab/automation/argocd/values.yaml"
+expect pass "chart with no components once the child is disabled (participant-built lab)" --draft
 
 fresh
 printf '\n== Exercise 3: Click through the console\n\nIn the console, open *Workloads*.\n\n== Evidence checkpoint\n' > "$work/lab/tail.adoc"

@@ -7,7 +7,9 @@ Working document. Not rendered by Antora.
 - Audience and the customer question the lab answers: CHANGE-ME
 - Products and pinned versions: CHANGE-ME
 - Tracks and time budget: CHANGE-ME
-- Tenancy (dedicated cluster per participant, or shared with per-user namespaces): CHANGE-ME
+- Where (RHDP order or pre-existing cluster), who builds the stack (GitOps or participants): CHANGE-ME
+- Tenancy (dedicated cluster per participant by default; shared with per-user namespaces only if asked): CHANGE-ME
+- Participant identity (Showroom terminal ServiceAccount, or their own user with the terminal off): CHANGE-ME
 - Test cluster and git repo URL: CHANGE-ME
 
 ## Lab map

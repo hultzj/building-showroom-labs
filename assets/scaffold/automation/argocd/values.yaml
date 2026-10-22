@@ -12,6 +12,10 @@ argocd:
 lab:
   namespace: CHANGE-ME
 
+# false for a participant-built lab with no components/lab-prereqs.
+prereqs:
+  enabled: true
+
 showroom:
   enabled: true
   namespace: showroom

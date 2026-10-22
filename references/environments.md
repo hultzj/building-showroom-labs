@@ -8,7 +8,7 @@ combination.
 |---|---|
 | Where | **RHDP order** (Field Content CI deploys `automation/argocd`) or **pre-existing cluster** (a facilitator or customer hands one over) |
 | Who builds the stack | **GitOps** (`lab-prereqs` and other components) or **participants** (guide steps install it), or a mix |
-| Tenancy | **Dedicated** cluster per participant, or **shared** cluster with one namespace set per user |
+| Tenancy | **Dedicated** cluster per participant (the default), or **shared** cluster with one namespace set per user, only when intake asks for it |
 
 ## Participant identity (decides RBAC, terminal and verification)
 
@@ -39,8 +39,11 @@ expectation to their username. Verification uses the same identity
 ## Shared cluster
 
 - **One Showroom for everyone.** Showroom's `user_data` cannot vary per user,
-  so pages derive per-user values in the shell: `ME=$(oc whoami)` and
-  `NS=$ME-<suffix>`. Have participants re-run that block after a terminal
+  so pages derive per-user values in the shell. Usernames are not always DNS
+  labels (SSO, email addresses), so sanitize them:
+  `NS=$(oc whoami | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | cut -c1-50 | sed 's/^-*//; s/-*$//')-<suffix>`,
+  with a suffix of 12 characters or fewer. GUI steps tell participants to type
+  that same name. Have participants re-run the block after a terminal
   restart.
 - **Per-user namespaces.** Either participants self-provision them as the
   first exercise, or GitOps creates them using RHDP's tenant pattern:
@@ -82,10 +85,6 @@ expectation to their username. Verification uses the same identity
   teardown.
 - **The Showroom chart always creates a 5Gi RWO PVC** (terminal on or off),
   so a default StorageClass is a hard requirement.
-- **If the chart would deploy only Showroom with the terminal off,** offer the
-  no-GitOps option: serve the guide from GitHub Pages (the scaffold's
-  workflow), with no cluster prerequisites. The trade-off: no split view
-  with a console tab.
 - **Per-event values** (bucket endpoint, model URL) live on an event branch.
   Point `gitops.revision` and the Showroom content ref at it, so `main` stays
   generic. Delete `userinfo.yaml` (RHDP order page only).
@@ -97,8 +96,8 @@ expectation to their username. Verification uses the same identity
 
 ## Participant-built stack
 
-- The chart deploys Showroom plus fixtures only. Drop `lab-prereqs`, or keep
-  only RBAC and decoys. Delete the scaffold's `namespace.yaml` when
+- The chart deploys Showroom plus fixtures only. Set `prereqs.enabled: false`
+  and delete `components/lab-prereqs`, or keep only RBAC and decoys in it. Delete the scaffold's `namespace.yaml` when
   participants create the namespace. `check-lab.sh` and `verify.sh` handle a
   chart with no components.
 - **Before the install,** the step must fail: a negative control such as

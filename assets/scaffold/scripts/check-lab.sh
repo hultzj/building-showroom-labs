@@ -57,6 +57,12 @@ for page in "$pages"/*.adoc; do
   ' "$page" >&2 || failed=1
 done
 
+# Every child Application sourced from this repo must point at a directory that exists.
+for path in $(helm template lab automation/argocd --set deployer.domain=apps.example.com 2>/dev/null |
+    awk '$1 == "path:" && $2 ~ /^automation\// {print $2}'); do
+  [[ -d $path ]] || fail "a child Application points at $path, which does not exist"
+done
+
 # A defined attribute still shown as {name} in the HTML was never substituted:
 # its block lacks subs="attributes+" (Asciidoctor does not warn about that).
 if [[ ! -d www ]]; then

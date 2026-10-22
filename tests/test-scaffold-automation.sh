@@ -13,6 +13,13 @@ n_respect=$(grep -c 'RespectIgnoreDifferences=true' <<<"$apps" || true)
 [[ $n_apps -gt 0 && $n_apps == "$n_respect" ]] && ok "every child Application respects ignoreDifferences" \
   || bad "every child Application respects ignoreDifferences ($n_respect of $n_apps)"
 
+# The terminal toggle reaches the upstream chart as terminal.enabled.
+for v in true false; do
+  got=$(helm template t "$SCAFFOLD/automation/argocd" --set deployer.domain=x --set showroom.terminal=$v |
+    awk '/^          terminal:/ {t = 1; next} t && /enabled:/ {print $2; exit}')
+  [[ $got == "$v" ]] && ok "showroom.terminal=$v reaches the chart" || bad "showroom.terminal=$v reaches the chart (got '$got')"
+done
+
 # Paths with spaces must reach the shell as one argument.
 dir='/tmp/lab checkout/automation'
 for target in verify bootstrap teardown; do

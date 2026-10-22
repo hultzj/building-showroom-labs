@@ -41,6 +41,7 @@ spec:
       # Without this, a sync re-applies fields listed in ignoreDifferences.
       - RespectIgnoreDifferences=true
 {{- end }}
+{{- if .Values.prereqs.enabled }}
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -76,3 +77,4 @@ spec:
     syncOptions:
       # Without this, a sync re-applies fields listed in ignoreDifferences.
       - RespectIgnoreDifferences=true
+{{- end }}
