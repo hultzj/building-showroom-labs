@@ -3,6 +3,7 @@ SHELL := /usr/bin/env bash
 AUTOMATION_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 GITOPS_NS ?= openshift-gitops
 SHOWROOM_NS ?= showroom
+REVISION ?= main
 
 .PHONY: help bootstrap status verify teardown
 
@@ -19,7 +20,7 @@ bootstrap:
 	  oc label namespace "$(SHOWROOM_NS)" "argocd.argoproj.io/managed-by=$(GITOPS_NS)" --overwrite
 	domain=$$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}') && \
 	  test -n "$$domain" && \
-	  sed "s|DEPLOYER_DOMAIN|$$domain|" "$(AUTOMATION_DIR)/bootstrap.yaml" | oc apply -f -
+	  sed "s|DEPLOYER_DOMAIN|$$domain|; s|GIT_REVISION|$(REVISION)|" "$(AUTOMATION_DIR)/bootstrap.yaml" | oc apply -f -
 
 status:
 	oc -n $(GITOPS_NS) get applications.argoproj.io -l demo.redhat.com/application=field-content

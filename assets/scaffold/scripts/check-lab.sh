@@ -39,8 +39,9 @@ for page in "$pages"/*.adoc; do
 done
 
 # Argo CD consumes these charts straight from main, so they must render.
+[[ -d automation/argocd ]] || fail "automation/argocd (the parent chart) is missing"
 for chart in automation/argocd automation/argocd/components/*/; do
-  [[ -d $chart ]] || continue  # a participant-built lab may have no components
+  [[ $chart == automation/argocd || -d $chart ]] || continue  # a participant-built lab may have no components
   # Components get the parent's values, as the parent passes them through.
   helm template lab "$chart" -f automation/argocd/values.yaml --set deployer.domain=apps.example.com >/dev/null ||
     fail "$chart does not render"
@@ -58,10 +59,11 @@ for page in "$pages"/*.adoc; do
 done
 
 # Every child Application sourced from this repo must point at a directory that exists.
-for path in $(helm template lab automation/argocd --set deployer.domain=apps.example.com 2>/dev/null |
-    awk '$1 == "path:" && $2 ~ /^automation\// {print $2}'); do
-  [[ -d $path ]] || fail "a child Application points at $path, which does not exist"
-done
+if rendered=$(helm template lab automation/argocd --set deployer.domain=apps.example.com 2>/dev/null); then
+  for path in $(awk '$1 == "path:" && $2 ~ /^automation\// {print $2}' <<<"$rendered"); do
+    [[ -d $path ]] || fail "a child Application points at $path, which does not exist"
+  done
+fi
 
 # Participants paste collapsible assertions into their own shell: one that can `exit` must run in ( ... ).
 for page in "$pages"/*.adoc; do

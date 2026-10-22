@@ -27,6 +27,12 @@ for target in verify bootstrap teardown; do
   grep -Fq "\"$dir/" <<<"$cmd" && ok "make $target quotes its paths" || bad "make $target quotes its paths: $cmd"
 done
 
+# An event branch deploys from that branch: the parent's targetRevision follows REVISION.
+make -n -f "$SCAFFOLD/automation/Makefile" bootstrap REVISION=event-2026 | grep -q 's|GIT_REVISION|event-2026|' \
+  && ok "make bootstrap REVISION= sets the parent's revision" || bad "make bootstrap REVISION= sets the parent's revision"
+grep -q 'targetRevision: GIT_REVISION' "$SCAFFOLD/automation/bootstrap.yaml" \
+  && ok "bootstrap.yaml takes its revision from make" || bad "bootstrap.yaml takes its revision from make"
+
 # verify.sh must fail when an expected child Application is missing.
 fake=$(mktemp -d)
 trap 'rm -rf "$fake"' EXIT

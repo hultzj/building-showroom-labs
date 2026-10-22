@@ -102,6 +102,10 @@ PY
 expect fail "collapsible assertion that can exit, without a subshell" --draft
 
 fresh
+rm -rf "$work/lab/automation/argocd"
+expect fail "missing parent chart" --draft
+
+fresh
 sed -i.bak '/^== Evidence checkpoint$/d' "$page" && rm "$page.bak"
 expect fail "module without Evidence checkpoint" --draft
 

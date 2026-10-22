@@ -1,5 +1,5 @@
 # Parent Application for clusters without an RHDP order; `make bootstrap`
-# fills in the cluster's ingress domain. On RHDP the Field Content CI creates
+# fills in the cluster's ingress domain and the git revision (REVISION, default main). On RHDP the Field Content CI creates
 # the equivalent itself.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -15,7 +15,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/CHANGE-ME/CHANGE-ME.git
-    targetRevision: main
+    targetRevision: GIT_REVISION
     path: automation/argocd
     helm:
       valuesObject:

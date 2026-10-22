@@ -39,16 +39,23 @@ expectation to their username. Verification uses the same identity
 ## Shared cluster
 
 - **One Showroom for everyone.** Showroom's `user_data` cannot vary per user,
-  so pages derive per-user values in the shell. Usernames are not always DNS
-  labels (SSO, email addresses), and two can sanitize to the same text. So
-  the name is the sanitized username plus a checksum of the full username:
+  so pages derive each user's namespace in the shell. Pick the rule by who
+  creates the namespace:
+  - **GitOps creates it** (the tenant pattern below, from the facilitator's
+    DNS-safe user list): `NS=$(oc whoami)-<suffix>`, matching the
+    `<username>-<suffix>` the tenant chart creates.
+  - **Participants self-provision it** and usernames may be arbitrary (SSO,
+    email addresses): the sanitized username plus the full checksum of the
+    username, so distinct users get distinct, valid names. A CRC collision
+    is still possible but fails loudly: `oc new-project` reports
+    `AlreadyExists`, and RBAC forbids touching another user's project.
 
-  ```bash
-  ME=$(oc whoami)
-  B=$(printf '%s' "$ME" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | cut -c1-40 | sed 's/^-*//; s/-*$//')
-  NS="${B:+$B-}u$(printf '%s' "$ME" | cksum | cut -c1-6)-<suffix>"   # suffix of 12 characters or fewer
-  echo "$NS"
-  ```
+    ```bash
+    ME=$(oc whoami)
+    B=$(printf '%s' "$ME" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | cut -c1-38 | sed 's/^-*//; s/-*$//')
+    NS="${B:+$B-}u$(printf '%s' "$ME" | cksum | cut -d' ' -f1)-<suffix>"   # suffix of 12 characters or fewer
+    echo "$NS"
+    ```
 
   GUI steps tell participants to type the printed name. Have participants re-run the block after a terminal
   restart.
@@ -103,8 +110,10 @@ expectation to their username. Verification uses the same identity
   owner's approval, removed at teardown.
 - **The Showroom chart always creates a 5Gi RWO PVC** (terminal on or off),
   so a default StorageClass is a hard requirement.
-- **Per-event values** (bucket endpoint, model URL) live on an event branch.
-  Point `gitops.revision` and the Showroom content ref at it, so `main` stays
+- **Per-event values** (bucket endpoint, model URL) live on an event branch
+  whose `values.yaml` sets `gitops.revision` to that branch, which also drives
+  the Showroom content ref. Deploy with `make -C automation bootstrap
+  REVISION=<branch>`, or give the branch in the RHDP order, so `main` stays
   generic. Delete `userinfo.yaml` (RHDP order page only).
 - The facilitator runs `make -C automation bootstrap` and owns teardown. The
   cleanup page splits into **participant cleanup** (what they created) and
@@ -119,7 +128,8 @@ expectation to their username. Verification uses the same identity
   participants create the namespace. `check-lab.sh` and `verify.sh` handle a
   chart with no components.
 - **Before the install,** the step must fail: a negative control such as
-  `oc api-resources --api-group=<group>` printing nothing.
+  `oc api-resources --api-group=<group> -o name` printing nothing. Without
+  `-o name` it prints a header even when nothing matches.
 - **Choosing the channel:** on the test cluster, read
   `oc get packagemanifest <package> -n openshift-marketplace -o
   jsonpath='{.status.defaultChannel}'` and the channel list. Make the
