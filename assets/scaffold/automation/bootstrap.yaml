@@ -15,7 +15,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/CHANGE-ME/CHANGE-ME.git
-    targetRevision: GIT_REVISION
+    targetRevision: "GIT_REVISION"
     path: automation/argocd
     helm:
       valuesObject:

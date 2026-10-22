@@ -16,25 +16,33 @@ help:
 	  '  make verify      PASS/FAIL readiness checks for class' \
 	  '  make teardown    Delete the lab Applications and everything they created'
 
-# bootstrap guards every namespace a child Application deploys into (Argo CD would adopt a foreign one,
-# and teardown would delete it), then creates and labels the Showroom namespace, which the upstream
-# chart creates unlabeled, so Argo CD may deploy there. No comments inside the recipe: after
-# backslash-newline joining, a shell comment would swallow the rest of it.
+# bootstrap deploys exactly what Argo CD will sync: it refuses unless this checkout is the pushed
+# REVISION (no local changes) and REVISION matches gitops.revision. It then guards every namespace a
+# child Application deploys into (Argo CD would adopt a foreign one and teardown would delete it),
+# creates missing ones atomically, and labels them so Argo CD may deploy there. No comments inside
+# the recipe: after backslash-newline joining, a shell comment would swallow the rest of it.
 bootstrap:
 	@set -euo pipefail; \
 	[[ "$(REVISION)" =~ ^[A-Za-z0-9._/-]+$$ ]] || { echo "REVISION '$(REVISION)' has unsafe characters" >&2; exit 1; }; \
+	vrev=$$(awk '/^gitops:/ {g = 1} g && $$1 == "revision:" {print $$2; exit}' "$(AUTOMATION_DIR)/argocd/values.yaml"); \
+	[[ "$$vrev" == "$(REVISION)" ]] || { echo "REVISION $(REVISION) differs from gitops.revision ($$vrev) in values.yaml; set it on that branch" >&2; exit 1; }; \
+	head=$$(git -C "$(AUTOMATION_DIR)" rev-parse HEAD); \
+	remote=$$(git -C "$(AUTOMATION_DIR)" ls-remote origin "refs/heads/$(REVISION)" | cut -f1); \
+	if [[ -z "$$remote" || "$$remote" != "$$head" ]] || ! git -C "$(AUTOMATION_DIR)" diff --quiet HEAD -- .; then \
+	  echo "check out the pushed $(REVISION) with no local changes under automation/: Argo CD deploys the remote" >&2; exit 1; fi; \
 	domain=$$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}'); test -n "$$domain"; \
 	apps=$$(helm template "$(LAB_APP)" "$(AUTOMATION_DIR)/argocd" --set deployer.domain="$$domain"); \
-	for ns in $$(awk '$$1 == "destination:" {d = 1} d && $$1 == "namespace:" {print $$2; d = 0}' <<<"$$apps" | sort -u); do \
+	nss=$$(awk '$$1 == "destination:" {d = 1} d && $$1 == "namespace:" {print $$2; d = 0}' <<<"$$apps" | sort -u); \
+	missing=""; \
+	for ns in $$nss; do \
 	  state=$$(oc get namespace "$$ns" --ignore-not-found -o jsonpath='{.metadata.name}/{.metadata.labels.app\.kubernetes\.io/part-of}'); \
-	  case "$$state" in ""|"$$ns/$(LAB_APP)") ;; \
+	  case "$$state" in "") missing="$$missing $$ns" ;; "$$ns/$(LAB_APP)") ;; \
 	    *) echo "namespace $$ns exists and is not this lab's ($(LAB_APP)); rename it in values.yaml" >&2; exit 1 ;; esac; \
 	done; \
-	sns=$$(awk -v app="$(LAB_APP)-showroom" '$$1 == "name:" && $$2 == app {f = 1} f && $$1 == "destination:" {d = 1} f && d && $$1 == "namespace:" {print $$2; exit}' <<<"$$apps"); \
-	if [[ -n "$$sns" ]]; then \
-	  oc create namespace "$$sns" --dry-run=client -o yaml | oc apply -f -; \
-	  oc label namespace "$$sns" "argocd.argoproj.io/managed-by=$(GITOPS_NS)" "app.kubernetes.io/part-of=$(LAB_APP)" --overwrite; \
-	fi; \
+	for ns in $$missing; do oc create namespace "$$ns"; done; \
+	for ns in $$nss; do \
+	  oc label namespace "$$ns" "argocd.argoproj.io/managed-by=$(GITOPS_NS)" "app.kubernetes.io/part-of=$(LAB_APP)" --overwrite; \
+	done; \
 	sed "s|DEPLOYER_DOMAIN|$$domain|; s|GIT_REVISION|$(REVISION)|" "$(AUTOMATION_DIR)/bootstrap.yaml" | oc apply -f -
 
 status:

@@ -38,14 +38,39 @@ for page in "$pages"/*.adoc; do
   ' "$page" >&2 || failed=1
 done
 
-# Argo CD consumes these charts straight from main, so they must render.
+# Argo CD consumes these charts straight from git, so they must render. Each child from this repo is
+# rendered with exactly the values its parent passes, and every Namespace it creates must carry the
+# lab's part-of label, which make bootstrap's ownership guard relies on.
 [[ -d automation/argocd ]] || fail "automation/argocd (the parent chart) is missing"
-for chart in automation/argocd automation/argocd/components/*/; do
-  [[ $chart == automation/argocd || -d $chart ]] || continue  # a participant-built lab may have no components
-  # Components get the parent's values, as the parent passes them through.
-  helm template lab "$chart" -f automation/argocd/values.yaml --set deployer.domain=apps.example.com >/dev/null ||
-    fail "$chart does not render"
-done
+tmp=$(mktemp -d); trap 'rm -rf "$tmp"' EXIT
+if rendered=$(helm template lab automation/argocd --set deployer.domain=apps.example.com 2>&1); then
+  awk -v dir="$tmp" '
+    function flush() {
+      if (path != "") { n++; printf "%s", vals > (dir "/" n ".values"); print path > (dir "/" n ".path"); close(dir "/" n ".values"); close(dir "/" n ".path") }
+      path = ""; vals = ""; vo = 0
+    }
+    /^---/ { flush(); next }
+    vo { if ($0 ~ /^[[:space:]]*$/) next
+         if (match($0, /[^ ]/) <= ind) vo = 0; else { vals = vals substr($0, ind + 2) "\n"; next } }
+    $1 == "path:" && $2 ~ /^automation\// { path = $2 }
+    $1 == "valuesObject:" { vo = 1; ind = match($0, /[^ ]/) }
+    END { flush() }
+  ' <<<"$rendered"
+  for pf in "$tmp"/*.path; do
+    [[ -e $pf ]] || break
+    path=$(<"$pf")
+    [[ -d $path ]] || { fail "a child Application points at $path, which does not exist"; continue; }
+    out=$(helm template lab "$path" -f "${pf%.path}.values" 2>&1) || { fail "$path does not render with the values its parent passes"; continue; }
+    awk '/^---/ { if (ns && !own) bad = 1; ns = 0; own = 0 }
+         /^kind: Namespace$/ { ns = 1 }
+         /app\.kubernetes\.io\/part-of: lab$/ { own = 1 }
+         END { if (ns && !own) bad = 1; exit bad }' <<<"$out" ||
+      fail "$path: a Namespace lacks app.kubernetes.io/part-of (the parent must pass partOf)"
+  done
+else
+  printf '%s\n' "$rendered" >&2
+  fail "automation/argocd does not render"
+fi
 
 # Every exercise, GUI-only ones included, states an Expected result.
 for page in "$pages"/*.adoc; do

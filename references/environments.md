@@ -71,8 +71,10 @@ expectation to their username. Verification uses the same identity
 - **Capacity.** The facilitator guide states the per-user footprint times N,
   plus the shared services. `verify.sh` checks that every user can do the
   first step. Impersonate with groups:
-  `--as userN --as-group system:authenticated --as-group system:authenticated:oauth`.
-  `--as` alone drops the groups that grant project self-provisioning.
+  `--as userN --as-group system:authenticated --as-group system:authenticated:oauth`,
+  plus `--as-group <g>` for each OpenShift Group that lists the user. `--as`
+  alone drops every group, including the ones that grant project
+  self-provisioning, and a grant through any Group would go unseen.
 - **Participant-chosen names collide.** The facilitator guide lists projects
   whose name does not match their requester
   (`openshift.io/requester` annotation).

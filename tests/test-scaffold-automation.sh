@@ -30,7 +30,7 @@ done
 # An event branch deploys from that branch: the parent's targetRevision follows REVISION.
 make -n -f "$SCAFFOLD/automation/Makefile" bootstrap REVISION=event-2026 | grep -q 's|GIT_REVISION|event-2026|' \
   && ok "make bootstrap REVISION= sets the parent's revision" || bad "make bootstrap REVISION= sets the parent's revision"
-grep -q 'targetRevision: GIT_REVISION' "$SCAFFOLD/automation/bootstrap.yaml" \
+grep -q 'targetRevision: "GIT_REVISION"' "$SCAFFOLD/automation/bootstrap.yaml" \
   && ok "bootstrap.yaml takes its revision from make" || bad "bootstrap.yaml takes its revision from make"
 
 # verify.sh must fail when an expected child Application is missing.
@@ -107,9 +107,19 @@ case "$*" in
     [[ -n ${FAKE_NS_ERROR:-} ]] && { echo "Error from server (Forbidden)" >&2; exit 1; }
     eval "printf '%s' \"\${FAKE_NS_$(tr - _ <<<"$ns"):-}\"" ;;
   *ingresses.config*) printf 'apps.example.com' ;;
+  "apply -f -") cat > /dev/null; echo "oc apply" >> "$FAKE_LOG" ;;
   *) echo "oc $*" >> "$FAKE_LOG" ;;
 esac
 SH
+cat > "$fake/git" <<'SH'
+#!/usr/bin/env bash
+case "$*" in
+  *"rev-parse HEAD"*) echo "${FAKE_HEAD:-c0ffee}" ;;
+  *"ls-remote"*) [[ -n ${FAKE_NO_REMOTE:-} ]] || printf '%s\trefs/heads/x\n' "${FAKE_REMOTE:-c0ffee}" ;;
+  *"diff --quiet"*) [[ -z ${FAKE_DIRTY:-} ]] ;;
+esac
+SH
+chmod +x "$fake/git"
 export FAKE_LOG="$fake/log"
 boot() { : > "$FAKE_LOG"; env "$@" PATH="$fake:$PATH" make -s -f "$lab/automation/Makefile" bootstrap >/dev/null 2>&1; }
 mutated() { grep -qE 'oc (apply|label|create)' "$FAKE_LOG"; }
@@ -125,7 +135,16 @@ boot FAKE_NS_team_guide="team-guide/" && bad "the guard checks the Showroom name
 printf '\nprereqs:\n  enabled: false\n' >> "$V"
 boot FAKE_NS_event_ns="event-ns/" && ok "a namespace no child deploys to is not guarded (prereqs off)" || bad "a namespace no child deploys to is not guarded (prereqs off)"
 boot REVISION='event/a&b' && bad "bootstrap rejects a revision with unsafe characters" || ok "bootstrap rejects a revision with unsafe characters"
+boot REVISION=other-branch && bad "bootstrap refuses a REVISION that differs from gitops.revision" || ok "bootstrap refuses a REVISION that differs from gitops.revision"
+boot FAKE_REMOTE=deadbeef && bad "bootstrap refuses when the checkout is not the pushed revision" || ok "bootstrap refuses when the checkout is not the pushed revision"
+mutated && bad "an unpushed checkout changes nothing" || ok "an unpushed checkout changes nothing"
+boot FAKE_DIRTY=1 && bad "bootstrap refuses local changes under automation/" || ok "bootstrap refuses local changes under automation/"
+boot FAKE_NO_REMOTE=1 && bad "bootstrap refuses a revision missing on the remote" || ok "bootstrap refuses a revision missing on the remote"
+boot && grep -q '^oc create namespace team-guide$' "$FAKE_LOG" && ! grep -q 'dry-run' "$FAKE_LOG" \
+  && ok "missing namespaces are created atomically (no apply-and-adopt)" || bad "missing namespaces are created atomically (no apply-and-adopt)"
 rm -rf "$lab"
+ruby -ryaml -e 'v = YAML.safe_load(File.read(ARGV[0]).gsub("GIT_REVISION", "2026"))["spec"]["source"]["targetRevision"]; exit(v.is_a?(String) ? 0 : 1)' "$SCAFFOLD/automation/bootstrap.yaml" \
+  && ok "a numeric revision stays a string in targetRevision" || bad "a numeric revision stays a string in targetRevision"
 
 # The default terminal Role grants nothing that runs code in pods.
 helm template t "$SCAFFOLD/automation/argocd/components/lab-prereqs" --set lab.namespace=ns1 | grep -qE '^ *resources:.*pods/exec' \

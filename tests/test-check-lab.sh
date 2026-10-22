@@ -106,6 +106,10 @@ rm -rf "$work/lab/automation/argocd"
 expect fail "missing parent chart" --draft
 
 fresh
+sed -i.bak '/partOf: {{ .Release.Name | quote }}/d' "$work/lab/automation/argocd/templates/applications.yaml"
+expect fail "parent no longer passes the ownership label to the component" --draft
+
+fresh
 sed -i.bak '/^== Evidence checkpoint$/d' "$page" && rm "$page.bak"
 expect fail "module without Evidence checkpoint" --draft
 
