@@ -28,7 +28,7 @@ for target in verify bootstrap teardown; do
 done
 
 # An event branch deploys from that branch: the parent's targetRevision follows REVISION.
-make -n -f "$SCAFFOLD/automation/Makefile" bootstrap REVISION=event-2026 | grep -q 's|GIT_REVISION|event-2026|' \
+grep -q 's|GIT_REVISION|event-2026|' <<<"$(make -n -f "$SCAFFOLD/automation/Makefile" bootstrap REVISION=event-2026)" \
   && ok "make bootstrap REVISION= sets the parent's revision" || bad "make bootstrap REVISION= sets the parent's revision"
 grep -q 'targetRevision: "GIT_REVISION"' "$SCAFFOLD/automation/bootstrap.yaml" \
   && ok "bootstrap.yaml takes its revision from make" || bad "bootstrap.yaml takes its revision from make"
@@ -83,7 +83,7 @@ n_label=$(grep -c 'app.kubernetes.io/part-of: t$' <<<"$apps" || true)
 prereqs=$(helm template t "$SCAFFOLD/automation/argocd/components/lab-prereqs" --set lab.namespace=ns1)
 grep -q 'argocd.argoproj.io/managed-by: openshift-gitops' <<<"$prereqs" \
   && ok "lab namespace is labeled for the Argo CD instance" || bad "lab namespace is labeled for the Argo CD instance"
-make -n -f "$SCAFFOLD/automation/Makefile" bootstrap | grep -q 'argocd.argoproj.io/managed-by=' \
+grep -q 'argocd.argoproj.io/managed-by=' <<<"$(make -n -f "$SCAFFOLD/automation/Makefile" bootstrap)" \
   && ok "bootstrap labels the Showroom namespace first" || bad "bootstrap labels the Showroom namespace first"
 n_retry=$(grep -c '^    retry:' <<<"$apps" || true)
 [[ $n_retry == "$n_apps" ]] && ok "every child Application retries (grant arrives after the namespace)" || bad "every child Application retries ($n_retry of $n_apps)"
@@ -96,7 +96,7 @@ lab=$(mktemp -d); cp -R "$SCAFFOLD/automation" "$lab/"
 V="$lab/automation/argocd/values.yaml"
 sed -i.bak 's/^  revision: main$/  revision: event-x/; s/^  namespace: CHANGE-ME$/  namespace: event-ns/' "$V"
 sed -i.bak 's/CHANGE-ME-lab/my-lab/' "$lab/automation/bootstrap.yaml"  # an author's real lab name
-make -n -f "$lab/automation/Makefile" bootstrap 2>/dev/null | grep -q 'event-x' \
+grep -q 'event-x' <<<"$(make -n -f "$lab/automation/Makefile" bootstrap 2>/dev/null)" \
   && ok "bootstrap defaults to the revision in values.yaml" || bad "bootstrap defaults to the revision in values.yaml"
 APP=my-lab
 cat > "$fake/oc" <<'SH'
