@@ -32,6 +32,10 @@ make -C automation status            # repeat until every Application is Synced/
 make -C automation verify            # every line PASS
 ```
 
+If the Showroom pod sits in `Init:Error`, read the guide build:
+`oc -n showroom logs deploy/showroom -c antora-builder`. After pushing a fix,
+delete the pod; its init containers keep the old clone until it is replaced.
+
 A sync error is a lab bug. Fix it in the chart, push, and let Argo CD
 re-sync. Do not patch the cluster by hand.
 

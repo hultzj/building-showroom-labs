@@ -45,5 +45,5 @@ the filled-in skeleton. Its parts, in order:
 - With `subs="attributes+"`, `{name}` is an attribute. Write shell variables as `$VAR`, never `${VAR}`, and escape literal braces (`'%\{http_code\}'`). `attribute-missing: warn` plus `--log-failure-level warn` fails the build on a mistake.
 - Long waits, PID-checked kills and full scripted checks go in `[%collapsible]` blocks so the main path stays short.
 - Admonitions are rare: `[IMPORTANT]` for safety boundaries, `[CAUTION]` for destructive or irreversible steps.
-- Use one `[mermaid]` diagram where the flow itself is the lesson. The pinned mermaid extension cannot substitute attributes, so hard-code names in the diagram. No screenshots; they drift.
+- No Antora extensions: the field-content Showroom builder image (`quay.io/rhpds/antora`) has none, so `[mermaid]` and tabs fail or render raw. Show a flow as a table (source / destination / result / why) or a numbered list. No screenshots; they drift.
 - Links that leave the site: `link:https://...[text^]`. Cross-page: `xref:file.adoc[text]`.

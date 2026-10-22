@@ -67,6 +67,10 @@ sed -i.bak 's/^  namespace: filled$/  namespace: ""/' "$work/lab/automation/argo
 expect fail "empty lab namespace does not render" --draft
 
 fresh
+printf '\n[mermaid]\n....\nflowchart LR\n  A --> B\n....\n' >> "$work/lab/content/modules/ROOT/pages/01-overview.adoc"
+expect fail "mermaid block (Showroom's builder has no extensions)" --draft
+
+fresh
 sed -i.bak '/^== Evidence checkpoint$/d' "$page" && rm "$page.bak"
 expect fail "module without Evidence checkpoint" --draft
 
