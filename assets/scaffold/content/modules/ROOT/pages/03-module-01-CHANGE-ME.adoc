@@ -42,7 +42,11 @@ In short: CHANGE-ME
 ====
 [source,bash,subs="attributes+"]
 ----
-test "$(oc -n {lab_namespace} get pods --no-headers | wc -l)" -gt 0
+(
+test "$(oc -n {lab_namespace} get pods --no-headers | wc -l)" -gt 0 ||
+  { echo "FAIL: no pods in {lab_namespace}"; exit 1; }
+echo PASS
+)
 ----
 ====
 

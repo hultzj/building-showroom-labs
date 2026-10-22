@@ -44,6 +44,7 @@ the filled-in skeleton. Its parts, in order:
 - Every block that shows a lab name uses `subs="attributes+"`, including non-execute blocks. Without it `{name}` renders literally with no warning; `check-lab.sh` catches that in `www/`.
 - With `subs="attributes+"`, `{name}` is an attribute. Write shell variables as `$VAR`, never `${VAR}`, and escape literal braces (`'%\{http_code\}'`). `attribute-missing: warn` plus `--log-failure-level warn` fails the build on a mistake.
 - Long waits, PID-checked kills and full scripted checks go in `[%collapsible]` blocks so the main path stays short.
+- Participants paste scripted assertions into their own shell, so wrap each one in `( ... )`: an `exit 1` on FAIL then ends the subshell, not their terminal session. End with `echo PASS`.
 - Admonitions are rare: `[IMPORTANT]` for safety boundaries, `[CAUTION]` for destructive or irreversible steps.
 - No Antora extensions: the field-content Showroom builder image (`quay.io/rhpds/antora`) has none, so `[mermaid]` and tabs fail or render raw. Show a flow as a table (source / destination / result / why) or a numbered list. No screenshots; they drift.
 - Links that leave the site: `link:https://...[text^]`. Cross-page: `xref:file.adoc[text]`.
