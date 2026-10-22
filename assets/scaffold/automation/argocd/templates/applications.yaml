@@ -14,7 +14,7 @@ spec:
   project: {{ .Values.argocd.project }}
   source:
     repoURL: {{ .Values.showroom.chart.repoUrl }}
-    targetRevision: {{ .Values.showroom.chart.revision }}
+    targetRevision: {{ .Values.showroom.chart.revision | quote }}
     path: {{ .Values.showroom.chart.path }}
     helm:
       valuesObject:
@@ -63,7 +63,7 @@ spec:
   project: {{ .Values.argocd.project }}
   source:
     repoURL: {{ .Values.gitops.repoUrl }}
-    targetRevision: {{ .Values.gitops.revision }}
+    targetRevision: {{ .Values.gitops.revision | quote }}
     path: {{ .Values.gitops.basePath }}/components/lab-prereqs
     helm:
       valuesObject:

@@ -107,7 +107,12 @@ case "$*" in
   *"get namespace "*)
     ns=$(awk '{for (i = 1; i <= NF; i++) if ($i == "namespace") {print $(i + 1); exit}}' <<<"$*")
     [[ -n ${FAKE_NS_ERROR:-} ]] && { echo "Error from server (Forbidden)" >&2; exit 1; }
+    if [[ -f "$FAKE_STATE/$ns" ]]; then printf '%s/%s' "$ns" "$(cat "$FAKE_STATE/$ns")"; exit 0; fi
     eval "printf '%s' \"\${FAKE_NS_$(tr - _ <<<"$ns"):-}\"" ;;
+  "create -f -")
+    m=$(cat); ns=$(awk '$1 == "name:" {print $2; exit}' <<<"$m"); echo "oc create namespace $ns" >> "$FAKE_LOG"
+    [[ "create namespace $ns" != *"${FAKE_CREATE_FAIL:-@none@}"* ]] || exit 1
+    [[ -n ${FAKE_STATE:-} ]] && awk -F': ' '/app.kubernetes.io\/part-of/ {print $2}' <<<"$m" > "$FAKE_STATE/$ns"; exit 0 ;;
   *ingresses.config*) printf 'apps.example.com' ;;
   "apply -f -") cat > /dev/null; echo "oc apply" >> "$FAKE_LOG" ;;
   "create namespace "*) echo "oc $*" >> "$FAKE_LOG"; [[ "$*" != *"${FAKE_CREATE_FAIL:-@none@}"* ]] ;;
@@ -118,12 +123,13 @@ cat > "$fake/git" <<'SH'
 #!/usr/bin/env bash
 case "$*" in
   *"rev-parse HEAD"*) echo "${FAKE_HEAD:-c0ffee}" ;;
+  *"status --porcelain"*) printf '%s' "${FAKE_UNTRACKED:-}" ;;
   *"ls-remote"*) [[ -n ${FAKE_NO_REMOTE:-} ]] || printf '%s\trefs/heads/x\n' "${FAKE_REMOTE:-c0ffee}" ;;
   *"diff --quiet"*) [[ -z ${FAKE_DIRTY:-} ]] ;;
 esac
 SH
 chmod +x "$fake/git"
-export FAKE_LOG="$fake/log"
+export FAKE_LOG="$fake/log" FAKE_STATE=""
 boot() { : > "$FAKE_LOG"; env "$@" PATH="$fake:$PATH" make -s -f "$lab/automation/Makefile" bootstrap >/dev/null 2>&1; }
 mutated() { grep -qE 'oc (apply|label|create)' "$FAKE_LOG"; }
 boot && mutated && ok "bootstrap proceeds when the namespaces do not exist" || bad "bootstrap proceeds when the namespaces do not exist"
@@ -133,9 +139,11 @@ mutated && bad "a refused bootstrap changes nothing" || ok "a refused bootstrap 
 boot FAKE_NS_event_ns="event-ns/other-lab" && bad "bootstrap refuses another lab's namespace" || ok "bootstrap refuses another lab's namespace"
 boot FAKE_NS_showroom="showroom/other-lab" && bad "a missing lab namespace plus a foreign showroom is refused" || ok "a missing lab namespace plus a foreign showroom is refused"
 mutated && bad "... and nothing is created first" || ok "... and nothing is created first"
-boot FAKE_CREATE_FAIL="namespace showroom" || true  # expected to fail part-way
-first=$(grep -m1 -n 'create namespace event-ns' "$FAKE_LOG" | cut -d: -f1 || true); lbl=$(grep -m1 -n 'label namespace event-ns' "$FAKE_LOG" | cut -d: -f1 || true)
-[[ -n $first && -n $lbl ]] && ok "a namespace is labeled right after it is created (partial failure stays retryable)" || bad "a namespace is labeled right after it is created (partial failure stays retryable)"
+export FAKE_STATE="$fake/state"; mkdir -p "$FAKE_STATE"
+boot FAKE_CREATE_FAIL="namespace showroom" && bad "bootstrap fails when a namespace create fails" || ok "bootstrap fails when a namespace create fails"
+[[ $(cat "$FAKE_STATE/event-ns" 2>/dev/null) == "$APP" ]] && ok "the namespace created before the failure already carries the lab's label" || bad "the namespace created before the failure already carries the lab's label"
+boot && ! grep -q 'create namespace event-ns' "$FAKE_LOG" && ok "a retry after a partial failure succeeds without re-creating" || bad "a retry after a partial failure succeeds without re-creating"
+rm -rf "$FAKE_STATE"; export FAKE_STATE=""
 boot FAKE_NS_ERROR=1 && bad "bootstrap stops when a namespace lookup fails" || ok "bootstrap stops when a namespace lookup fails"
 mutated && bad "a failed lookup changes nothing" || ok "a failed lookup changes nothing"
 sed -i.bak 's/^  namespace: showroom$/  namespace: team-guide/' "$V"
@@ -147,12 +155,19 @@ boot REVISION=other-branch && bad "bootstrap refuses a REVISION that differs fro
 boot FAKE_REMOTE=deadbeef && bad "bootstrap refuses when the checkout is not the pushed revision" || ok "bootstrap refuses when the checkout is not the pushed revision"
 mutated && bad "an unpushed checkout changes nothing" || ok "an unpushed checkout changes nothing"
 boot FAKE_DIRTY=1 && bad "bootstrap refuses local changes under automation/" || ok "bootstrap refuses local changes under automation/"
+boot FAKE_UNTRACKED='?? automation/argocd/.helmignore' && bad "bootstrap refuses untracked or ignored files under automation/" || ok "bootstrap refuses untracked or ignored files under automation/"
 boot FAKE_NO_REMOTE=1 && bad "bootstrap refuses a revision missing on the remote" || ok "bootstrap refuses a revision missing on the remote"
 boot && grep -q '^oc create namespace team-guide$' "$FAKE_LOG" && ! grep -q 'dry-run' "$FAKE_LOG" \
   && ok "missing namespaces are created atomically (no apply-and-adopt)" || bad "missing namespaces are created atomically (no apply-and-adopt)"
+sed -i.bak 's/^  revision: event-x$/  revision: "event-x"/' "$V"
+boot && ok "a quoted gitops.revision works by default" || bad "a quoted gitops.revision works by default"
+boot REVISION=event-x && ok "a quoted gitops.revision matches an explicit REVISION" || bad "a quoted gitops.revision matches an explicit REVISION"
 rm -rf "$lab"
 ruby -ryaml -e 'v = YAML.safe_load(File.read(ARGV[0]).gsub("GIT_REVISION", "2026"))["spec"]["source"]["targetRevision"]; exit(v.is_a?(String) ? 0 : 1)' "$SCAFFOLD/automation/bootstrap.yaml" \
   && ok "a numeric revision stays a string in targetRevision" || bad "a numeric revision stays a string in targetRevision"
+helm template t "$SCAFFOLD/automation/argocd" --set deployer.domain=x --set-string gitops.revision=2026 |
+  ruby -ryaml -e 'YAML.load_stream(STDIN.read).compact.each { |d| r = d.dig("spec", "source", "targetRevision"); exit 1 unless r.nil? || r.is_a?(String) }' \
+  && ok "child Applications keep a numeric revision a string" || bad "child Applications keep a numeric revision a string"
 
 # The default terminal Role grants nothing that runs code in pods.
 helm template t "$SCAFFOLD/automation/argocd/components/lab-prereqs" --set lab.namespace=ns1 | grep -qE '^ *resources:.*pods/exec' \
