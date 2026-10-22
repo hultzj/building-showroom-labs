@@ -61,8 +61,8 @@ re-sync. Do not patch the cluster by hand.
   happy path. For at least one per module, confirm it exits non-zero when you
   break the condition.
 - With the participant's own identity, log in as a real non-admin participant
-  (on a shared cluster, two of them: `user1` and the decoy tenant's
-  neighbor). Run commands with that user's `oc` token.
+  (on a shared cluster, two of them, such as `user1` and `user2`, to see the
+  tenants isolated from each other and from the decoy). Run commands with that user's `oc` token.
 - **GUI steps:** drive them with the Playwright browser tools as the
   participant. Log in to the console or dashboard, click through the
   numbered steps, and take `browser_snapshot` to read the exact labels the

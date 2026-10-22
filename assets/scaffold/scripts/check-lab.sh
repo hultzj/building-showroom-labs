@@ -67,6 +67,10 @@ else
   if [[ -n "$names" ]] && grep -rnoE "\{($names)\}" www --include='*.html' >&2; then
     fail "attributes rendered literally; add subs=\"attributes+\" to those blocks"
   fi
+  # Asciidoctor strips a backslash only before {word}; anywhere else it reaches the participant.
+  if grep -rnoF '\{' www --include='*.html' >&2; then
+    fail "a backslash before a brace survived into the HTML; escape only {word} forms"
+  fi
 fi
 
 # The field-content Showroom builder (quay.io/rhpds/antora) has no mermaid extension.

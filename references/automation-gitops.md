@@ -81,9 +81,13 @@ Argo CD tracking annotation and are never pruned.
 
 - Targets: `help`, `bootstrap`, `status`, `verify`, `teardown`. Each target
   is a thin wrapper; the logic lives in scripts or the chart.
-- Absence checks: `! oc get x` treats an API error as "absent". Use
-  `[[ -z $(oc get x -o name --ignore-not-found) ]]`, which fails on errors
-  and passes only on a real empty result.
+- Absence checks: `! oc get x` treats an API error as "absent". Capture first:
+  `out=$(oc get x -o name --ignore-not-found) || return 1; [[ -z $out ]]`.
+- A negative control is evidence only if its target is alive. `verify.sh`
+  proves an authorized call to the same target succeeds.
+- Secrets the lab needs (bucket keys, API keys) never go in git. `make
+  bootstrap` reads them from environment variables and creates the Secret
+  before applying the parent Application.
 - Image digests apply to images the lab owns. The upstream Showroom chart's
   images are pinned by its commit SHA, its terminal by `showroom.terminalImage`,
   and operator-shipped images by the operator version.

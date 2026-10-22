@@ -84,6 +84,10 @@ echo '"name": "CHANGE-ME-lab"' > "$work/lab/package-lock.json"
 expect pass "lockfile generated before the rename is ignored" --draft
 
 fresh
+echo "<code>oc get pods -o jsonpath='\\{.items[*]}'</code>" > "$work/lab/www/modules/x.html"
+expect fail "backslash left in front of a brace in the HTML" --draft
+
+fresh
 sed -i.bak '/^== Evidence checkpoint$/d' "$page" && rm "$page.bak"
 expect fail "module without Evidence checkpoint" --draft
 

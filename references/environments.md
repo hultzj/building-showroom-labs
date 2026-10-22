@@ -23,9 +23,13 @@ CRD, or cross-tenant rights.
 
 When the terminal is off, participants run commands as themselves:
 
-- The Web Terminal operator in the console. Install it as a GitOps
-  component. `rhdp-gitops-patterns` `service-mesh-lab` has a tested
-  Subscription.
+- The Web Terminal operator in the console. On RHDP, copy the
+  `rhdp-gitops-patterns` `service-mesh-lab` Subscription. Elsewhere, use the
+  `redhat-operators` catalog instead of `rhpds-redhat-operators`, and make it
+  a toggle: if the operator is already installed, Argo CD must not adopt it,
+  or teardown deletes the owner's Subscription. The Web Terminal runs inside
+  a project, so deleting that project kills the terminal; warn on the cleanup
+  page. It also pulls in the DevWorkspace operator, which is left behind.
 - Or their own `oc login` on a workstation.
 
 Update the tab list in `ui-config.yml`, then swap the pre-flight's `oc whoami`
@@ -49,7 +53,14 @@ expectation to their username. Verification uses the same identity
   reach another tenant" never depends on another participant's progress.
 - **Capacity.** The facilitator guide states the per-user footprint times N,
   plus the shared services. `verify.sh` checks that every user can do the
-  first step: impersonate `--as userN` in a loop.
+  first step. Impersonate with groups:
+  `--as userN --as-group system:authenticated --as-group system:authenticated:oauth`.
+  `--as` alone drops the groups that grant project self-provisioning.
+- **Participant-chosen names collide.** The facilitator guide lists projects
+  whose name does not match their requester
+  (`openshift.io/requester` annotation).
+- **`User` objects exist only after a first login.** Check the identity
+  provider instead, and log in once as the first and last user before class.
 
 ## Pre-existing cluster (no RHDP order)
 
@@ -63,7 +74,21 @@ expectation to their username. Verification uses the same identity
     assume.
 
   On these clusters the Argo CD grant is a standing requirement of the lab.
-  Document the exact command, and say it needs the cluster owner's approval.
+  The verified command is `oc adm policy add-cluster-role-to-user
+  cluster-admin -z openshift-gitops-argocd-application-controller -n
+  openshift-gitops`. It needs cluster-admin because the Showroom chart binds
+  `ClusterRole edit`, and Kubernetes only lets you bind what you hold.
+  Document it as needing the cluster owner's approval, and remove it at
+  teardown.
+- **The Showroom chart always creates a 5Gi RWO PVC** (terminal on or off),
+  so a default StorageClass is a hard requirement.
+- **If the chart would deploy only Showroom with the terminal off,** offer the
+  no-GitOps option: serve the guide from GitHub Pages (the scaffold's
+  workflow), with no cluster prerequisites. The trade-off: no split view
+  with a console tab.
+- **Per-event values** (bucket endpoint, model URL) live on an event branch.
+  Point `gitops.revision` and the Showroom content ref at it, so `main` stays
+  generic. Delete `userinfo.yaml` (RHDP order page only).
 - The facilitator runs `make -C automation bootstrap` and owns teardown. The
   cleanup page splits into **participant cleanup** (what they created) and
   **facilitator teardown**. Teardown removes only what Argo CD created.
@@ -78,7 +103,15 @@ expectation to their username. Verification uses the same identity
   chart with no components.
 - **Before the install,** the step must fail: a negative control such as
   `oc api-resources --api-group=<group>` printing nothing.
-- **Operator install:** Subscription via `oc apply`, with
+- **Choosing the channel:** on the test cluster, read
+  `oc get packagemanifest <package> -n openshift-marketplace -o
+  jsonpath='{.status.defaultChannel}'` and the channel list. Make the
+  channel an attribute, and have `verify.sh` fail if the catalog stops
+  offering it.
+- **Operator install:** one primary path (console or CLI). The CLI path
+  first checks whether a Subscription for the package already exists (`oc
+  get subscriptions -A`, matching `.spec.name`), so a participant who used
+  the console doesn't create a second one. Subscription via `oc apply`, with
   `metadata.name: <package>`. Then a bounded wait chain:
   1. poll `.status.installedCSV`, then the CSV until `phase=Succeeded`;
   2. poll until the operator's CR exists (`oc wait` fails at once on a kind

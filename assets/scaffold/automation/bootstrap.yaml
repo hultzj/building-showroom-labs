@@ -1,6 +1,6 @@
 # Parent Application for clusters without an RHDP order; `make bootstrap`
-# fills in DEPLOYER_DOMAIN. On RHDP the Field Content CI creates the
-# equivalent itself.
+# fills in the cluster's ingress domain. On RHDP the Field Content CI creates
+# the equivalent itself.
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
