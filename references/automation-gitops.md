@@ -25,8 +25,13 @@ automation/
 - **showroom**: the upstream `rhpds/field-sourced-content-template`
   `examples/helm/components/showroom` chart, referenced by URL and **pinned to
   a commit SHA** (`showroom.chart.revision`), not copied. The parent passes
-  only the overrides it needs: content repo and ref, `deployer.domain`, and
-  `demo.namespace` (which lands in Showroom's `user_data`).
+  only the overrides it needs: content repo and ref, `deployer.domain`,
+  `demo.namespace`, and the terminal settings. Showroom merges its
+  `user_data` into the page attributes, but the chart writes exactly three
+  keys: `cluster_domain`, `demo_namespace` and `demo_app`. Only those can come
+  from the deployment. Any other per-event value (a bucket endpoint, a model
+  URL) is an `antora.yml` attribute the facilitator edits, or it is derived in
+  the shell.
 - **lab-prereqs**: everything the exercises assume already exists —
   namespaces, workloads, operator Subscriptions — plus the RoleBinding that
   gives the Showroom terminal identity its permissions.
@@ -34,6 +39,11 @@ automation/
   job), with `argocd.argoproj.io/sync-wave` to order them.
 
 ## The Showroom terminal identity
+
+This section applies when the participant acts as the terminal ServiceAccount.
+`environments.md` says when they act as their own user instead, with the
+terminal off.
+
 
 The Showroom terminal runs as the `showroom` ServiceAccount in the `showroom`
 namespace, where the upstream chart binds `ClusterRole edit` unconditionally
@@ -71,6 +81,12 @@ Argo CD tracking annotation and are never pruned.
 
 - Targets: `help`, `bootstrap`, `status`, `verify`, `teardown`. Each target
   is a thin wrapper; the logic lives in scripts or the chart.
+- Absence checks: `! oc get x` treats an API error as "absent". Use
+  `[[ -z $(oc get x -o name --ignore-not-found) ]]`, which fails on errors
+  and passes only on a real empty result.
+- Image digests apply to images the lab owns. The upstream Showroom chart's
+  images are pinned by its commit SHA, its terminal by `showroom.terminalImage`,
+  and operator-shipped images by the operator version.
 - `verify.sh` uses a `check "<name>" <command>` helper that prints PASS or
   FAIL per lab prerequisite and exits non-zero if any fail. The facilitator
   runs it before class as cluster-admin, so permission checks and probes

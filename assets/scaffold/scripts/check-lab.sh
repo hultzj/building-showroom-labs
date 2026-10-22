@@ -13,7 +13,7 @@ failed=0
 fail() { printf 'check-lab: %s\n' "$*" >&2; failed=1; }
 
 if grep -rIn --exclude-dir={node_modules,www,.git,.cache,evidence,.xreview} \
-     --exclude=check-lab.sh 'CHANGE-ME' . >&2; then
+     --exclude=check-lab.sh --exclude=package-lock.json 'CHANGE-ME' . >&2; then
   fail "scaffold placeholders remain (CHANGE-ME)"
 fi
 
@@ -40,9 +40,21 @@ done
 
 # Argo CD consumes these charts straight from main, so they must render.
 for chart in automation/argocd automation/argocd/components/*/; do
+  [[ -d $chart ]] || continue  # a participant-built lab may have no components
   # Components get the parent's values, as the parent passes them through.
   helm template lab "$chart" -f automation/argocd/values.yaml --set deployer.domain=apps.example.com >/dev/null ||
     fail "$chart does not render"
+done
+
+# Every exercise, GUI-only ones included, states an Expected result.
+for page in "$pages"/*.adoc; do
+  awk -v f="$page" '
+    function close_ex() { if (ex && !seen) { print f ":" ex_line ": exercise without an Expected result"; bad = 1 } ex = 0 }
+    /^==+ / { close_ex() }
+    /^== Exercise/ { ex = 1; seen = 0; ex_line = FNR }
+    ex && /^Expected result/ { seen = 1 }
+    END { close_ex(); exit bad }
+  ' "$page" >&2 || failed=1
 done
 
 # A defined attribute still shown as {name} in the HTML was never substituted:

@@ -15,6 +15,9 @@ lab:
 showroom:
   enabled: true
   namespace: showroom
+  # false when participants use their own identity (shared cluster or cluster-admin lab):
+  # the Showroom URL has no login, so its terminal must not hold their permissions.
+  terminal: true
   # Upstream chart, referenced (not copied) and pinned to a commit.
   chart:
     repoUrl: https://github.com/rhpds/field-sourced-content-template.git

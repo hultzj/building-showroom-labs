@@ -23,6 +23,7 @@ spec:
             repoUrl: {{ .Values.gitops.repoUrl | quote }}
             repoRef: {{ .Values.gitops.revision | quote }}
           terminal:
+            enabled: {{ .Values.showroom.terminal }}
             image: {{ .Values.showroom.terminalImage | quote }}
         deployer:
           domain: {{ .Values.deployer.domain | quote }}

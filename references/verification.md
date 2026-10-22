@@ -10,6 +10,8 @@ RHDP clusters come with these in place. A bare test cluster needs:
 - **OpenShift GitOps.** Check for `oc get csv -n openshift-gitops-operator`.
   If it is missing, ask the cluster owner before installing it; it is a
   cluster-wide operator.
+- **On a pre-existing delivery cluster this setup is part of the lab.** Copy
+  it into the facilitator guide's prerequisites; see `environments.md`.
 - **Argo CD permission to create the lab's resources.** On RHDP the
   application controller can do this. A fresh OpenShift GitOps install's
   default controller can create Namespaces, RBAC and ConfigMaps, but not
@@ -17,7 +19,7 @@ RHDP clusters come with these in place. A bare test cluster needs:
   Check with `oc auth can-i create deployments -n <ns>
   --as=system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller`.
   Ask the cluster owner before granting more, because the grant is
-  cluster-wide. That grant is test-cluster setup only, so it never goes into
+  cluster-wide. On a test cluster the grant is setup only and stays out of
   the lab repo.
 
 ## 2. Deploy
@@ -45,8 +47,9 @@ re-sync. Do not patch the cluster by hand.
   every page renders. Rendering checks: attributes are substituted, user_data
   values such as the cluster domain show real values, and the terminal tab
   connects.
-- Run each `role="execute"` block in page order **from the Showroom
-  terminal**. The terminal runs as the `showroom` ServiceAccount, and a
+- Walk as the participant identity from `environments.md`. With the
+  ServiceAccount identity, run each `role="execute"` block in page order
+  **from the Showroom terminal**. The terminal runs as the `showroom` ServiceAccount, and a
   cluster-admin shell hides missing RoleBindings. For long sessions, run the
   same commands with `oc exec -n showroom deploy/showroom -c terminal --
   bash -lc '<command>'`.
@@ -57,7 +60,15 @@ re-sync. Do not patch the cluster by hand.
 - Run every collapsible scripted assertion. Each one must exit 0 on the
   happy path. For at least one per module, confirm it exits non-zero when you
   break the condition.
-- Check every `GUI view:` claim in the console.
+- With the participant's own identity, log in as a real non-admin participant
+  (on a shared cluster, two of them: `user1` and the decoy tenant's
+  neighbor). Run commands with that user's `oc` token.
+- **GUI steps:** drive them with the Playwright browser tools as the
+  participant. Log in to the console or dashboard, click through the
+  numbered steps, and take `browser_snapshot` to read the exact labels the
+  guide must quote. Save a screenshot per step to `evidence/`. Never put
+  screenshots in the guide. Record the product and console versions in
+  `PLAN.md`. Check every `GUI view:` claim the same way.
 
 ## 4. Prove it repeats
 

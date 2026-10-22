@@ -36,8 +36,9 @@ run_verify() { FAKE_APPS=$1 PATH="$fake:$PATH" LAB_NS=ns LAB_APP=lab bash "$SCAF
 healthy='lab Synced/Healthy\nlab-showroom Synced/Healthy\nlab-prereqs Synced/Healthy\n'
 run_verify "$healthy" \
   && ok "verify passes with every Application Synced/Healthy" || bad "verify passes with every Application Synced/Healthy"
-run_verify 'lab-showroom Synced/Healthy\n' \
-  && bad "verify fails when the prereqs Application is missing" || ok "verify fails when the prereqs Application is missing"
+# A child the parent defines but that is missing leaves the parent OutOfSync.
+run_verify 'lab OutOfSync/Healthy\nlab-showroom Synced/Healthy\n' \
+  && bad "verify fails when the parent reports a missing child (OutOfSync)" || ok "verify fails when the parent reports a missing child (OutOfSync)"
 run_verify 'lab-showroom Synced/Healthy\nlab-prereqs OutOfSync/Healthy\n' \
   && bad "verify fails when an Application is OutOfSync" || ok "verify fails when an Application is OutOfSync"
 run_verify 'other-showroom Synced/Healthy\nother-prereqs Synced/Healthy\n' \
@@ -47,6 +48,12 @@ FAKE_APPS='lab-v1-showroom Synced/Healthy\nlab-v1-prereqs Synced/Healthy\n' PATH
   && bad "a dot in LAB_APP matches only a literal dot" || ok "a dot in LAB_APP matches only a literal dot"
 run_verify "${healthy}other-prereqs OutOfSync/Healthy\n" \
   && ok "another lab's unhealthy Application does not fail this lab" || bad "another lab's unhealthy Application does not fail this lab"
+run_verify 'lab Synced/Healthy\nlab-showroom Synced/Healthy\n' \
+  && ok "verify passes for a lab with only the showroom child" || bad "verify passes for a lab with only the showroom child"
+run_verify 'lab Synced/Healthy\nlab-showroom Synced/Healthy\nlab-operator Synced/Progressing\n' \
+  && bad "verify fails when any lab child is unhealthy" || ok "verify fails when any lab child is unhealthy"
+run_verify 'lab Synced/Healthy\n' \
+  && bad "verify fails without the showroom child" || ok "verify fails without the showroom child"
 FAKE_NO_ROUTE=1 run_verify "$healthy" \
   && bad "verify fails when the Showroom route is missing" || ok "verify fails when the Showroom route is missing"
 FAKE_CURL_RC=22 run_verify "$healthy" \

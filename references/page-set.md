@@ -35,6 +35,7 @@ the filled-in skeleton. Its parts, in order:
    - optionally a `.The scripted assertion for this exercise` `[%collapsible]` block: a non-execute bash block that exits non-zero on failure;
    - optionally `GUI view:` where to see the same evidence in the console tab.
    At least one exercise per module is a negative control (the action that must fail) or a break-and-restore.
+   **GUI steps** (console, OpenShift AI dashboard, a web app): number the clicks, using the exact labels you saw in the live pass, then `Expected result:` with `// UNVERIFIED`. Follow it with a `role="execute"` command that reads the same state back (`oc get … -o jsonpath=…`) whenever one exists; the read-back is the evidence. Every `== Exercise` needs an `Expected result:`, and `check-lab.sh` enforces this.
 7. `== Evidence checkpoint`: questions the learner should now be able to answer, then a `.Answer key` collapsible.
 8. `Proceed to xref:<next page>[<title>].`
 
@@ -42,7 +43,8 @@ the filled-in skeleton. Its parts, in order:
 
 - Participant commands: `[source,bash,role="execute",subs="attributes+"]`. Showroom adds a click-to-run button to `role="execute"` blocks.
 - Every block that shows a lab name uses `subs="attributes+"`, including non-execute blocks. Without it `{name}` renders literally with no warning; `check-lab.sh` catches that in `www/`.
-- With `subs="attributes+"`, `{name}` is an attribute. Write shell variables as `$VAR`, never `${VAR}`, and escape literal braces (`'%\{http_code\}'`). `attribute-missing: warn` plus `--log-failure-level warn` fails the build on a mistake.
+- With `subs="attributes+"`, `{name}` is an attribute. Write shell variables as `$VAR`, never `${VAR}`, and escape every literal brace: `'%\{http_code\}'`, jsonpath `\{.items[*]}` and `\{end}`, regex `\{64}`. `attribute-missing: warn` plus `--log-failure-level warn` fails the build on most mistakes.
+- Heredocs containing `$(…)` that the shell must not expand (Tekton params, scripts) use `<<'EOF'`.
 - Long waits, PID-checked kills and full scripted checks go in `[%collapsible]` blocks so the main path stays short.
 - Participants paste scripted assertions into their own shell, so wrap each one in `( ... )`: an `exit 1` on FAIL then ends the subshell, not their terminal session. End with `echo PASS`.
 - Admonitions are rare: `[IMPORTANT]` for safety boundaries, `[CAUTION]` for destructive or irreversible steps.

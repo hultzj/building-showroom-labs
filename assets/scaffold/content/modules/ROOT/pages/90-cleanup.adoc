@@ -12,10 +12,11 @@ CHANGE-ME
 Expected result: CHANGE-ME
 // UNVERIFIED
 
-== Remove the lab environment (cluster owner only)
+== Remove the lab environment (whoever deployed it)
 
-Do not run this on a facilitator-managed cluster. From a cluster-admin shell
-in a checkout of this repository, first look at what the teardown will
+Only the person who ran the bootstrap, or the RHDP order, removes the
+environment. From a cluster-admin shell in a checkout of this repository,
+first look at what the teardown will
 delete. Every Application listed goes, along with everything it created:
 
 [source,bash,subs="attributes+"]

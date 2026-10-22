@@ -71,6 +71,19 @@ printf '\n[mermaid]\n....\nflowchart LR\n  A --> B\n....\n' >> "$work/lab/conten
 expect fail "mermaid block (Showroom's builder has no extensions)" --draft
 
 fresh
+rm -rf "$work/lab/automation/argocd/components"
+expect pass "chart with no components (participant-built lab)" --draft
+
+fresh
+printf '\n== Exercise 3: Click through the console\n\nIn the console, open *Workloads*.\n\n== Evidence checkpoint\n' > "$work/lab/tail.adoc"
+awk -v tail="$work/lab/tail.adoc" '/^== Evidence checkpoint$/ && !d {while ((getline l < tail) > 0) if (l !~ /Evidence checkpoint/) print l; d=1} {print}' "$page" > "$page.new" && mv "$page.new" "$page"
+expect fail "GUI-only exercise without an Expected result" --draft
+
+fresh
+echo '"name": "CHANGE-ME-lab"' > "$work/lab/package-lock.json"
+expect pass "lockfile generated before the rename is ignored" --draft
+
+fresh
 sed -i.bak '/^== Evidence checkpoint$/d' "$page" && rm "$page.bak"
 expect fail "module without Evidence checkpoint" --draft
 
