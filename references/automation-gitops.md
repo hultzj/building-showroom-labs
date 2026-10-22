@@ -58,7 +58,9 @@ attributes. That duplication is accepted: the live pass catches drift.
 Child Applications use `selfHeal: true`. If an exercise changes a resource
 Argo CD manages (scaling a Deployment, patching a ConfigMap), add an
 `ignoreDifferences` entry for exactly that field, with a one-line comment
-naming the exercise. Without it, Argo CD reverts the participant's change.
+naming the exercise. The scaffold's children already set the
+`RespectIgnoreDifferences=true` sync option; without both, Argo CD reverts the
+participant's change.
 Resources the participant creates fresh, such as a NetworkPolicy, carry no
 Argo CD tracking annotation and are never pruned.
 
@@ -68,7 +70,8 @@ Argo CD tracking annotation and are never pruned.
   is a thin wrapper; the logic lives in scripts or the chart.
 - `verify.sh` uses a `check "<name>" <command>` helper that prints PASS or
   FAIL per lab prerequisite and exits non-zero if any fail. The facilitator
-  runs it before class.
+  runs it before class as cluster-admin, so permission checks and probes
+  impersonate the terminal (`--as "$TERMINAL_SA"`).
 - `teardown` deletes the parent Application. Its
   `resources-finalizer.argocd.argoproj.io` finalizer cascades the delete to
   the children and their resources.

@@ -8,7 +8,7 @@ drafts you want kept but unpublished in `content/extra/`, outside `pages/`.
 |---|---|
 | `index.adoc` | One-line tagline · what the lab examines and why · numbered task list · Learning objectives · How to run the lab (command completion is not proof) · Choose your track (only with more than one track) · Lab map table: Module / Outcome / Time, with a track total · Technical model (each layer in one sentence, what none covers alone) · Start here |
 | `01-overview.adoc` | Control questions (the customer's questions, answered with evidence) · The stack table: Layer / Component / Responsibility · the one distinction learners must be able to explain · Lab progression (one short `===` per module) · Interpretation guardrails (what is *not* claimed) |
-| `02-details.adoc` | What you need: table by role · Provided by the facilitator · Verify the tools · Pre-flight: `oc whoami` plus one `oc auth can-i` per permission the exercises need, run from the Showroom terminal · Access details table |
+| `02-details.adoc` | What you need: table by role · Provided by the facilitator · Verify the tools · Pre-flight: `oc whoami` plus one `oc auth can-i` per permission the exercises need, run from the Showroom terminal (for the namespace itself use `oc get namespace <ns>`: `can-i get namespaces/<ns>` answers `no` even when a RoleBinding allows it) · Access details table |
 | `NN-module-MM-<slug>.adoc` | The module template below |
 | `90-cleanup.adoc` | Participant-local cleanup first, then cluster-owner cleanup with a look-before-delete check |
 | `91-reference.adoc` | What each upstream project contributes (links) · Evidence interpretation table: Topic / Supported interpretation / Required evidence · What this lab does not prove · Further reading |

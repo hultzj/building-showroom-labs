@@ -25,7 +25,7 @@ Pattern sources: `taylorjordanNC/rhai-agent-security` (guide structure, evidence
 ## Rules
 
 - Command completion is not proof. `Expected result:` names the field or value seen and what it proves.
-- Every allow gets a matching deny; every break gets a restore.
+- Every allow gets a matching deny; every break gets a restore. A deny asserts the specific failure (exit code, error, event), not just "it failed".
 - Behavior checks live in the guide (collapsible scripted assertions) and `automation/verify.sh`. There is no separate test suite.
 - Commands are re-runnable (`oc apply`, or `delete --ignore-not-found` before `create`) and name their namespace.
 - Images: `repo:tag@sha256:<multi-arch index digest>`, confirmed with `skopeo inspect` or the registry API. No secrets in content.

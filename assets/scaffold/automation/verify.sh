@@ -5,6 +5,8 @@ set -uo pipefail
 GITOPS_NS=${GITOPS_NS:-openshift-gitops}
 SHOWROOM_NS=${SHOWROOM_NS:-showroom}
 LAB_NS=${LAB_NS:-CHANGE-ME}
+# Participants run every step as this identity; check as it, not as the facilitator.
+TERMINAL_SA="system:serviceaccount:${SHOWROOM_NS}:showroom"
 failed=0
 
 check() {
@@ -19,11 +21,13 @@ check() {
 }
 
 apps_synced_healthy() {
-  local states
-  states=$(oc -n "$GITOPS_NS" get applications.argoproj.io \
+  local apps
+  apps=$(oc -n "$GITOPS_NS" get applications.argoproj.io \
     -l demo.redhat.com/application=field-content \
-    -o jsonpath='{range .items[*]}{.status.sync.status}/{.status.health.status}{"\n"}{end}') || return 1
-  [[ -n "$states" ]] && ! grep -qv '^Synced/Healthy$' <<<"$states"
+    -o jsonpath='{range .items[*]}{.metadata.name} {.status.sync.status}/{.status.health.status}{"\n"}{end}') || return 1
+  # Both children must exist, and every Application must be Synced/Healthy.
+  grep -q -- '-showroom ' <<<"$apps" && grep -q -- '-prereqs ' <<<"$apps" &&
+    ! grep -qv ' Synced/Healthy$' <<<"$apps"
 }
 
 showroom_answers() {
@@ -36,5 +40,6 @@ check "lab Applications are Synced/Healthy" apps_synced_healthy
 check "Showroom route answers" showroom_answers
 # CHANGE-ME: one check per prerequisite the exercises assume, e.g.
 # check "demo workload ready" oc -n "$LAB_NS" rollout status deploy/<name> --timeout=10s
+# check "terminal can <verb> <resource>" oc auth can-i <verb> <resource> -n "$LAB_NS" --as "$TERMINAL_SA"
 
 exit "$failed"

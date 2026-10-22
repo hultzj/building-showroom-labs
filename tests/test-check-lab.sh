@@ -28,6 +28,10 @@ expect fail "untouched scaffold fails on CHANGE-ME" --draft
 
 fresh
 expect pass "filled scaffold passes in draft mode" --draft
+echo 'CHANGE-ME' >> "$work/lab/automation/argocd/values.yaml"
+expect fail "one leftover CHANGE-ME fails" --draft
+
+fresh
 expect fail "filled scaffold fails strict mode while steps are UNVERIFIED"
 
 fresh
