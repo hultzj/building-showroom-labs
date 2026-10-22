@@ -88,6 +88,11 @@ echo "<code>oc get pods -o jsonpath='\\{.items[*]}'</code>" > "$work/lab/www/mod
 expect fail "backslash left in front of a brace in the HTML" --draft
 
 fresh
+printf '\n== Exercise 3: Pick one option\n\n=== Option A\n\nDo A.\n\nExpected result: A done.\n\n== Evidence checkpoint\n' > "$work/lab/tail.adoc"
+awk -v tail="$work/lab/tail.adoc" '/^== Evidence checkpoint$/ && !d {while ((getline l < tail) > 0) if (l !~ /Evidence checkpoint/) print l; d=1} {print}' "$page" > "$page.new" && mv "$page.new" "$page"
+expect pass "exercise whose Expected result sits in a === subsection" --draft
+
+fresh
 sed -i.bak '/^== Evidence checkpoint$/d' "$page" && rm "$page.bak"
 expect fail "module without Evidence checkpoint" --draft
 

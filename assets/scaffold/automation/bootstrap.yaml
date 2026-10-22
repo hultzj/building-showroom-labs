@@ -8,6 +8,7 @@ metadata:
   namespace: openshift-gitops
   labels:
     demo.redhat.com/application: field-content
+    app.kubernetes.io/part-of: CHANGE-ME-lab
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:

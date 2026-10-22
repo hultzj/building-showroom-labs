@@ -50,7 +50,7 @@ done
 for page in "$pages"/*.adoc; do
   awk -v f="$page" '
     function close_ex() { if (ex && !seen) { print f ":" ex_line ": exercise without an Expected result"; bad = 1 } ex = 0 }
-    /^==+ / { close_ex() }
+    /^== / || /^= / { close_ex() }  # === subsections stay inside their exercise
     /^== Exercise/ { ex = 1; seen = 0; ex_line = FNR }
     ex && /^Expected result/ { seen = 1 }
     END { close_ex(); exit bad }

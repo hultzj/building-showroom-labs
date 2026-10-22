@@ -26,11 +26,12 @@ apps_synced_healthy() {
   local apps
   apps=$(oc -n "$GITOPS_NS" get applications.argoproj.io \
     -l demo.redhat.com/application=field-content \
-    -o jsonpath='{range .items[*]}{.metadata.name} {.status.sync.status}/{.status.health.status}{"\n"}{end}') || return 1
-  # The showroom child must exist, and every Application of this lab must be Synced/Healthy.
+    -o jsonpath='{range .items[*]}{.metadata.name} {.status.sync.status}/{.status.health.status} {.metadata.labels.app\.kubernetes\.io/part-of}{"\n"}{end}') || return 1
+  # This lab's Applications carry part-of=<LAB_APP>: the showroom child must exist, and all must be Synced/Healthy.
   awk -v app="$LAB_APP" '
+    $3 != app { next }
     $1 == app "-showroom" { s = 1 }
-    ($1 == app || index($1, app "-") == 1) && $2 != "Synced/Healthy" { bad = 1 }
+    $2 != "Synced/Healthy" { bad = 1 }
     END { exit !(s && !bad) }
   ' <<<"$apps"
 }
