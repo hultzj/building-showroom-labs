@@ -93,7 +93,7 @@ grep -q 'image: .*@sha256:' <<<"$apps" && ok "Showroom terminal image is digest-
 
 # With no REVISION given, bootstrap deploys the revision values.yaml names (one source of truth).
 lab=$(mktemp -d); cp -R "$SCAFFOLD/automation" "$lab/"
-sed -i.bak 's/^  revision: main$/  revision: event-x/' "$lab/automation/argocd/values.yaml"
+sed -i.bak 's/^  revision: main$/  revision: event-x/; s/^  namespace: CHANGE-ME$/  namespace: event-ns/' "$lab/automation/argocd/values.yaml"
 make -n -f "$lab/automation/Makefile" bootstrap | grep -q 's|GIT_REVISION|event-x|' \
   && ok "bootstrap defaults to the revision in values.yaml" || bad "bootstrap defaults to the revision in values.yaml"
 
@@ -101,7 +101,8 @@ make -n -f "$lab/automation/Makefile" bootstrap | grep -q 's|GIT_REVISION|event-
 cat > "$fake/oc" <<'SH'
 #!/usr/bin/env bash
 case "$*" in
-  *"get namespace"*) [[ -n ${FAKE_NS_LABEL+x} ]] || exit 1; printf '%s' "$FAKE_NS_LABEL" ;;
+  *"get namespace showroom"*) [[ -n ${FAKE_NS_LABEL+x} ]] || exit 1; printf '%s' "$FAKE_NS_LABEL" ;;
+  *"get namespace event-ns"*) [[ -n ${FAKE_LAB_NS_LABEL+x} ]] || exit 1; printf '%s' "$FAKE_LAB_NS_LABEL" ;;
   *ingresses.config*) printf 'apps.example.com' ;;
   *) echo "oc $*" >> "$FAKE_LOG" ;;
 esac
@@ -112,6 +113,7 @@ FAKE_NS_LABEL='' run_boot && bad "bootstrap refuses a foreign showroom namespace
 grep -q 'label namespace' "$FAKE_LOG" && bad "a refused bootstrap changes nothing" || ok "a refused bootstrap changes nothing"
 FAKE_NS_LABEL='openshift-gitops' run_boot && ok "bootstrap reuses its own labeled namespace" || bad "bootstrap reuses its own labeled namespace"
 (unset FAKE_NS_LABEL; run_boot) && ok "bootstrap creates a missing namespace" || bad "bootstrap creates a missing namespace"
+FAKE_LAB_NS_LABEL='' run_boot && bad "bootstrap refuses a foreign lab namespace" || ok "bootstrap refuses a foreign lab namespace"
 rm -rf "$lab"
 
 exit "$errors"
