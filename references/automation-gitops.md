@@ -36,8 +36,11 @@ automation/
 ## The Showroom terminal identity
 
 The Showroom terminal runs as the `showroom` ServiceAccount in the `showroom`
-namespace, where it has `edit`. The Showroom Route has no login, so **anyone
-with the URL holds these permissions.** Every permission an exercise needs
+namespace, where the upstream chart binds `ClusterRole edit` unconditionally
+(it can read that namespace's secrets and patch the Showroom deployment). The
+Showroom Route has no login, so **anyone with the URL holds these
+permissions.** That is accepted for RHDP's dedicated per-participant clusters;
+on a shared cluster, keep the lab up only while you need it. Every permission an exercise needs
 elsewhere is a Role and RoleBinding in `lab-prereqs`, scoped to the lab
 namespace:
 
