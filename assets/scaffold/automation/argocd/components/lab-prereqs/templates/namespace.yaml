@@ -20,10 +20,9 @@ rules:
   - apiGroups: [""]
     resources: ["pods", "services", "events"]
     verbs: ["get", "list", "watch"]
-  - apiGroups: [""]
-    resources: ["pods/exec"]
-    verbs: ["create", "get"]
-  # CHANGE-ME: add exactly the resources and verbs the exercises change.
+  # CHANGE-ME: add exactly the resources and verbs the exercises change, for example
+  # pods/exec (create, get) only if a step runs `oc exec`. Delete this Role and its
+  # RoleBinding when showroom.terminal is false.
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
