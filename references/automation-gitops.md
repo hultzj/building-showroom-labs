@@ -83,6 +83,10 @@ Argo CD tracking annotation and are never pruned.
   is a thin wrapper; the logic lives in scripts or the chart.
 - Absence checks: `! oc get x` treats an API error as "absent". Capture first:
   `out=$(oc get x -o name --ignore-not-found) || return 1; [[ -z $out ]]`.
+- `oc auth can-i` takes subresources as `--subresource`: `can-i create pods
+  --subresource=exec`. `can-i create pods/exec` asks about a pod *named*
+  `exec`, answers `no` even when exec is allowed, and makes a negative control
+  pass vacuously. (Verified live.)
 - A negative control is evidence only if its target is alive. `verify.sh`
   proves an authorized call to the same target succeeds.
 - Secrets the lab needs (bucket keys, API keys) never go in git. `make

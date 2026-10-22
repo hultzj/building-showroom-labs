@@ -91,29 +91,47 @@ n_retry=$(grep -c '^    retry:' <<<"$apps" || true)
 # Every image the Showroom child runs is pinned by digest, not a moving tag.
 grep -q 'image: .*@sha256:' <<<"$apps" && ok "Showroom terminal image is digest-pinned" || bad "Showroom terminal image is digest-pinned"
 
-# With no REVISION given, bootstrap deploys the revision values.yaml names (one source of truth).
+# --- make bootstrap: revision default, ownership guard, input validation (fake oc, real helm) ---
 lab=$(mktemp -d); cp -R "$SCAFFOLD/automation" "$lab/"
-sed -i.bak 's/^  revision: main$/  revision: event-x/; s/^  namespace: CHANGE-ME$/  namespace: event-ns/' "$lab/automation/argocd/values.yaml"
-make -n -f "$lab/automation/Makefile" bootstrap | grep -q 's|GIT_REVISION|event-x|' \
+V="$lab/automation/argocd/values.yaml"
+sed -i.bak 's/^  revision: main$/  revision: event-x/; s/^  namespace: CHANGE-ME$/  namespace: event-ns/' "$V"
+sed -i.bak 's/CHANGE-ME-lab/my-lab/' "$lab/automation/bootstrap.yaml"  # an author's real lab name
+make -n -f "$lab/automation/Makefile" bootstrap 2>/dev/null | grep -q 'event-x' \
   && ok "bootstrap defaults to the revision in values.yaml" || bad "bootstrap defaults to the revision in values.yaml"
-
-# bootstrap refuses to take over an existing Showroom namespace that is not this lab's.
+APP=my-lab
 cat > "$fake/oc" <<'SH'
 #!/usr/bin/env bash
 case "$*" in
-  *"get namespace showroom"*) [[ -n ${FAKE_NS_LABEL+x} ]] || exit 1; printf '%s' "$FAKE_NS_LABEL" ;;
-  *"get namespace event-ns"*) [[ -n ${FAKE_LAB_NS_LABEL+x} ]] || exit 1; printf '%s' "$FAKE_LAB_NS_LABEL" ;;
+  *"get namespace "*)
+    ns=$(awk '{for (i = 1; i <= NF; i++) if ($i == "namespace") {print $(i + 1); exit}}' <<<"$*")
+    [[ -n ${FAKE_NS_ERROR:-} ]] && { echo "Error from server (Forbidden)" >&2; exit 1; }
+    eval "printf '%s' \"\${FAKE_NS_$(tr - _ <<<"$ns"):-}\"" ;;
   *ingresses.config*) printf 'apps.example.com' ;;
   *) echo "oc $*" >> "$FAKE_LOG" ;;
 esac
 SH
 export FAKE_LOG="$fake/log"
-run_boot() { : > "$FAKE_LOG"; PATH="$fake:$PATH" make -s -f "$lab/automation/Makefile" bootstrap >/dev/null 2>&1; }
-FAKE_NS_LABEL='' run_boot && bad "bootstrap refuses a foreign showroom namespace" || ok "bootstrap refuses a foreign showroom namespace"
-grep -q 'label namespace' "$FAKE_LOG" && bad "a refused bootstrap changes nothing" || ok "a refused bootstrap changes nothing"
-FAKE_NS_LABEL='openshift-gitops' run_boot && ok "bootstrap reuses its own labeled namespace" || bad "bootstrap reuses its own labeled namespace"
-(unset FAKE_NS_LABEL; run_boot) && ok "bootstrap creates a missing namespace" || bad "bootstrap creates a missing namespace"
-FAKE_LAB_NS_LABEL='' run_boot && bad "bootstrap refuses a foreign lab namespace" || ok "bootstrap refuses a foreign lab namespace"
+boot() { : > "$FAKE_LOG"; env "$@" PATH="$fake:$PATH" make -s -f "$lab/automation/Makefile" bootstrap >/dev/null 2>&1; }
+mutated() { grep -qE 'oc (apply|label|create)' "$FAKE_LOG"; }
+boot && mutated && ok "bootstrap proceeds when the namespaces do not exist" || bad "bootstrap proceeds when the namespaces do not exist"
+boot FAKE_NS_showroom="showroom/$APP" FAKE_NS_event_ns="event-ns/$APP" && ok "bootstrap reuses namespaces this lab owns" || bad "bootstrap reuses namespaces this lab owns"
+boot FAKE_NS_showroom="showroom/" && bad "bootstrap refuses an unlabeled showroom namespace" || ok "bootstrap refuses an unlabeled showroom namespace"
+mutated && bad "a refused bootstrap changes nothing" || ok "a refused bootstrap changes nothing"
+boot FAKE_NS_event_ns="event-ns/other-lab" && bad "bootstrap refuses another lab's namespace" || ok "bootstrap refuses another lab's namespace"
+boot FAKE_NS_ERROR=1 && bad "bootstrap stops when a namespace lookup fails" || ok "bootstrap stops when a namespace lookup fails"
+mutated && bad "a failed lookup changes nothing" || ok "a failed lookup changes nothing"
+sed -i.bak 's/^  namespace: showroom$/  namespace: team-guide/' "$V"
+boot FAKE_NS_team_guide="team-guide/" && bad "the guard checks the Showroom namespace values.yaml deploys to" || ok "the guard checks the Showroom namespace values.yaml deploys to"
+printf '\nprereqs:\n  enabled: false\n' >> "$V"
+boot FAKE_NS_event_ns="event-ns/" && ok "a namespace no child deploys to is not guarded (prereqs off)" || bad "a namespace no child deploys to is not guarded (prereqs off)"
+boot REVISION='event/a&b' && bad "bootstrap rejects a revision with unsafe characters" || ok "bootstrap rejects a revision with unsafe characters"
 rm -rf "$lab"
+
+# The default terminal Role grants nothing that runs code in pods.
+helm template t "$SCAFFOLD/automation/argocd/components/lab-prereqs" --set lab.namespace=ns1 | grep -qE '^ *resources:.*pods/exec' \
+  && bad "default terminal Role has no pods/exec" || ok "default terminal Role has no pods/exec"
+helm template t "$SCAFFOLD/automation/argocd" --set deployer.domain=x >/dev/null
+helm template t "$SCAFFOLD/automation/argocd/components/lab-prereqs" --set lab.namespace=ns1 --set partOf=t | grep -q 'app.kubernetes.io/part-of: t' \
+  && ok "lab namespace carries the lab's part-of label" || bad "lab namespace carries the lab's part-of label"
 
 exit "$errors"

@@ -6,3 +6,4 @@ showroom:
 deployer:
   domain: ""
 argocdNamespace: openshift-gitops
+partOf: ""
