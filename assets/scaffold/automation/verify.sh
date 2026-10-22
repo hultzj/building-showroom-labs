@@ -31,9 +31,10 @@ apps_synced_healthy() {
   # This lab's Applications carry part-of=<LAB_APP>: the showroom child must exist, and all must be Synced/Healthy.
   awk -v app="$LAB_APP" '
     $1 != app && $3 != app { next }  # the parent by name: RHDP creates it without the label
+    $1 == app { p = 1 }  # the parent: missing children or a missing parent must fail
     $1 == app "-showroom" { s = 1 }
     $2 != "Synced/Healthy" { bad = 1 }
-    END { exit !(s && !bad) }
+    END { exit !(p && s && !bad) }
   ' <<<"$apps"
 }
 

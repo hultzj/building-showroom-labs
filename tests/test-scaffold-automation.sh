@@ -65,6 +65,8 @@ run_verify 'lab Synced/Healthy lab\nlab-showroom Synced/Healthy lab\n' \
   && ok "verify passes for a lab with only the showroom child" || bad "verify passes for a lab with only the showroom child"
 run_verify 'lab Synced/Healthy lab\nlab-showroom Synced/Healthy lab\nlab-operator Synced/Progressing lab\n' \
   && bad "verify fails when any lab child is unhealthy" || ok "verify fails when any lab child is unhealthy"
+run_verify 'lab-showroom Synced/Healthy lab\n' \
+  && bad "verify fails when the parent Application is missing" || ok "verify fails when the parent Application is missing"
 run_verify 'lab Synced/Healthy lab\n' \
   && bad "verify fails without the showroom child" || ok "verify fails without the showroom child"
 run_verify "${healthy}lab-v2 Synced/Healthy lab-v2\nlab-v2-showroom OutOfSync/Degraded lab-v2\n" \
@@ -108,6 +110,7 @@ case "$*" in
     eval "printf '%s' \"\${FAKE_NS_$(tr - _ <<<"$ns"):-}\"" ;;
   *ingresses.config*) printf 'apps.example.com' ;;
   "apply -f -") cat > /dev/null; echo "oc apply" >> "$FAKE_LOG" ;;
+  "create namespace "*) echo "oc $*" >> "$FAKE_LOG"; [[ "$*" != *"${FAKE_CREATE_FAIL:-@none@}"* ]] ;;
   *) echo "oc $*" >> "$FAKE_LOG" ;;
 esac
 SH
@@ -128,6 +131,11 @@ boot FAKE_NS_showroom="showroom/$APP" FAKE_NS_event_ns="event-ns/$APP" && ok "bo
 boot FAKE_NS_showroom="showroom/" && bad "bootstrap refuses an unlabeled showroom namespace" || ok "bootstrap refuses an unlabeled showroom namespace"
 mutated && bad "a refused bootstrap changes nothing" || ok "a refused bootstrap changes nothing"
 boot FAKE_NS_event_ns="event-ns/other-lab" && bad "bootstrap refuses another lab's namespace" || ok "bootstrap refuses another lab's namespace"
+boot FAKE_NS_showroom="showroom/other-lab" && bad "a missing lab namespace plus a foreign showroom is refused" || ok "a missing lab namespace plus a foreign showroom is refused"
+mutated && bad "... and nothing is created first" || ok "... and nothing is created first"
+boot FAKE_CREATE_FAIL="namespace showroom" || true  # expected to fail part-way
+first=$(grep -m1 -n 'create namespace event-ns' "$FAKE_LOG" | cut -d: -f1 || true); lbl=$(grep -m1 -n 'label namespace event-ns' "$FAKE_LOG" | cut -d: -f1 || true)
+[[ -n $first && -n $lbl ]] && ok "a namespace is labeled right after it is created (partial failure stays retryable)" || bad "a namespace is labeled right after it is created (partial failure stays retryable)"
 boot FAKE_NS_ERROR=1 && bad "bootstrap stops when a namespace lookup fails" || ok "bootstrap stops when a namespace lookup fails"
 mutated && bad "a failed lookup changes nothing" || ok "a failed lookup changes nothing"
 sed -i.bak 's/^  namespace: showroom$/  namespace: team-guide/' "$V"

@@ -19,7 +19,8 @@ help:
 # bootstrap deploys exactly what Argo CD will sync: it refuses unless this checkout is the pushed
 # REVISION (no local changes) and REVISION matches gitops.revision. It then guards every namespace a
 # child Application deploys into (Argo CD would adopt a foreign one and teardown would delete it),
-# creates missing ones atomically, and labels them so Argo CD may deploy there. No comments inside
+# creates each missing one atomically and labels it at once (so a partial failure stays retryable),
+# so Argo CD may deploy there. No comments inside
 # the recipe: after backslash-newline joining, a shell comment would swallow the rest of it.
 bootstrap:
 	@set -euo pipefail; \
@@ -37,10 +38,10 @@ bootstrap:
 	for ns in $$nss; do \
 	  state=$$(oc get namespace "$$ns" --ignore-not-found -o jsonpath='{.metadata.name}/{.metadata.labels.app\.kubernetes\.io/part-of}'); \
 	  case "$$state" in "") missing="$$missing $$ns" ;; "$$ns/$(LAB_APP)") ;; \
-	    *) echo "namespace $$ns exists and is not this lab's ($(LAB_APP)); rename it in values.yaml" >&2; exit 1 ;; esac; \
+	    *) echo "namespace $$ns exists and is not this lab's ($(LAB_APP)); rename it in values.yaml, content/antora.yml and verify.sh" >&2; exit 1 ;; esac; \
 	done; \
-	for ns in $$missing; do oc create namespace "$$ns"; done; \
 	for ns in $$nss; do \
+	  case " $$missing " in *" $$ns "*) oc create namespace "$$ns" ;; esac; \
 	  oc label namespace "$$ns" "argocd.argoproj.io/managed-by=$(GITOPS_NS)" "app.kubernetes.io/part-of=$(LAB_APP)" --overwrite; \
 	done; \
 	sed "s|DEPLOYER_DOMAIN|$$domain|; s|GIT_REVISION|$(REVISION)|" "$(AUTOMATION_DIR)/bootstrap.yaml" | oc apply -f -
