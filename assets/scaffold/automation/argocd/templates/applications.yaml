@@ -40,6 +40,12 @@ spec:
     syncOptions:
       # Without this, a sync re-applies fields listed in ignoreDifferences.
       - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 3m
 {{- end }}
 {{- if .Values.prereqs.enabled }}
 ---
@@ -63,6 +69,7 @@ spec:
       valuesObject:
         lab:
           namespace: {{ .Values.lab.namespace | quote }}
+        argocdNamespace: {{ .Values.argocd.namespace | quote }}
         showroom:
           namespace: {{ .Values.showroom.namespace | quote }}
         deployer:
@@ -77,4 +84,10 @@ spec:
     syncOptions:
       # Without this, a sync re-applies fields listed in ignoreDifferences.
       - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 3m
 {{- end }}

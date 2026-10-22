@@ -95,6 +95,13 @@ awk -v tail="$work/lab/tail.adoc" '/^== Evidence checkpoint$/ && !d {while ((get
 expect pass "exercise whose Expected result sits in a === subsection" --draft
 
 fresh
+python3 - "$page" <<'PY'
+import sys; p = sys.argv[1]; s = open(p).read()
+open(p, 'w').write(s.replace('----\n(\ntest ', '----\ntest ', 1).replace('echo PASS\n)\n----', 'echo PASS\n----', 1))
+PY
+expect fail "collapsible assertion that can exit, without a subshell" --draft
+
+fresh
 sed -i.bak '/^== Evidence checkpoint$/d' "$page" && rm "$page.bak"
 expect fail "module without Evidence checkpoint" --draft
 

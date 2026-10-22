@@ -63,6 +63,18 @@ for path in $(helm template lab automation/argocd --set deployer.domain=apps.exa
   [[ -d $path ]] || fail "a child Application points at $path, which does not exist"
 done
 
+# Participants paste collapsible assertions into their own shell: one that can `exit` must run in ( ... ).
+for page in "$pages"/*.adoc; do
+  awk -v f="$page" '
+    /^\[%collapsible\]/ { col = 1; next }
+    col && /^====$/ { inex = !inex; if (!inex) col = 0; next }
+    inex && /^----$/ { if (!inl) { inl = 1; first = ""; ln = FNR; ex = 0; next }
+                       inl = 0; if (ex && first != "(") { print f ":" ln ": assertion can exit the participant shell; wrap it in ( ... )"; bad = 1 }; next }
+    inl { if (first == "") first = $0; if ($0 ~ /(^|[^A-Za-z_])exit([^A-Za-z_]|$)/) ex = 1 }
+    END { exit bad }
+  ' "$page" >&2 || failed=1
+done
+
 # A defined attribute still shown as {name} in the HTML was never substituted:
 # its block lacks subs="attributes+" (Asciidoctor does not warn about that).
 if [[ ! -d www ]]; then

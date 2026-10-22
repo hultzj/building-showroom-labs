@@ -7,7 +7,8 @@ SHOWROOM_NS=${SHOWROOM_NS:-showroom}
 LAB_NS=${LAB_NS:-CHANGE-ME}
 # The parent Application name; children are named <LAB_APP>-<component>.
 LAB_APP=${LAB_APP:-CHANGE-ME-lab}
-# Participants run every step as this identity; check as it, not as the facilitator.
+# Check as the participant identity (environments.md), not as the facilitator: the terminal
+# ServiceAccount below, or a participant user (--as userN --as-group system:authenticated --as-group system:authenticated:oauth).
 TERMINAL_SA="system:serviceaccount:${SHOWROOM_NS}:showroom"
 failed=0
 
@@ -29,7 +30,7 @@ apps_synced_healthy() {
     -o jsonpath='{range .items[*]}{.metadata.name} {.status.sync.status}/{.status.health.status} {.metadata.labels.app\.kubernetes\.io/part-of}{"\n"}{end}') || return 1
   # This lab's Applications carry part-of=<LAB_APP>: the showroom child must exist, and all must be Synced/Healthy.
   awk -v app="$LAB_APP" '
-    $3 != app { next }
+    $1 != app && $3 != app { next }  # the parent by name: RHDP creates it without the label
     $1 == app "-showroom" { s = 1 }
     $2 != "Synced/Healthy" { bad = 1 }
     END { exit !(s && !bad) }

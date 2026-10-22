@@ -2,6 +2,7 @@ SHELL := /usr/bin/env bash
 
 AUTOMATION_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 GITOPS_NS ?= openshift-gitops
+SHOWROOM_NS ?= showroom
 
 .PHONY: help bootstrap status verify teardown
 
@@ -13,6 +14,9 @@ help:
 	  '  make teardown    Delete the lab Applications and everything they created'
 
 bootstrap:
+	# The upstream Showroom chart creates its namespace unlabeled; label it first so Argo CD may deploy there.
+	oc create namespace "$(SHOWROOM_NS)" --dry-run=client -o yaml | oc apply -f - && \
+	  oc label namespace "$(SHOWROOM_NS)" "argocd.argoproj.io/managed-by=$(GITOPS_NS)" --overwrite
 	domain=$$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}') && \
 	  test -n "$$domain" && \
 	  sed "s|DEPLOYER_DOMAIN|$$domain|" "$(AUTOMATION_DIR)/bootstrap.yaml" | oc apply -f -

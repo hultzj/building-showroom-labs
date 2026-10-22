@@ -40,10 +40,17 @@ expectation to their username. Verification uses the same identity
 
 - **One Showroom for everyone.** Showroom's `user_data` cannot vary per user,
   so pages derive per-user values in the shell. Usernames are not always DNS
-  labels (SSO, email addresses), so sanitize them:
-  `NS=$(oc whoami | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | cut -c1-50 | sed 's/^-*//; s/-*$//')-<suffix>`,
-  with a suffix of 12 characters or fewer. GUI steps tell participants to type
-  that same name. Have participants re-run the block after a terminal
+  labels (SSO, email addresses), and two can sanitize to the same text. So
+  the name is the sanitized username plus a checksum of the full username:
+
+  ```bash
+  ME=$(oc whoami)
+  B=$(printf '%s' "$ME" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | cut -c1-40 | sed 's/^-*//; s/-*$//')
+  NS="${B:+$B-}u$(printf '%s' "$ME" | cksum | cut -c1-6)-<suffix>"   # suffix of 12 characters or fewer
+  echo "$NS"
+  ```
+
+  GUI steps tell participants to type the printed name. Have participants re-run the block after a terminal
   restart.
 - **Per-user namespaces.** Either participants self-provision them as the
   first exercise, or GitOps creates them using RHDP's tenant pattern:
@@ -76,13 +83,24 @@ expectation to their username. Verification uses the same identity
   - capacity, a default StorageClass, and anything else the exercises
     assume.
 
-  On these clusters the Argo CD grant is a standing requirement of the lab.
-  The verified command is `oc adm policy add-cluster-role-to-user
-  cluster-admin -z openshift-gitops-argocd-application-controller -n
-  openshift-gitops`. It needs cluster-admin because the Showroom chart binds
-  `ClusterRole edit`, and Kubernetes only lets you bind what you hold.
-  Document it as needing the cluster owner's approval, and remove it at
-  teardown.
+  **Argo CD permissions on these clusters** come from namespace labels, not a
+  cluster-wide grant. The OpenShift GitOps operator gives its default Argo CD
+  instance `admin` in any namespace labelled
+  `argocd.argoproj.io/managed-by=openshift-gitops`. That covers Deployments,
+  Services, Routes and PVCs, and binding `edit`. It does not extend beyond
+  those namespaces. (Verified on OpenShift 5.0 with GitOps 1.22: the grant
+  lands within seconds.)
+  - The scaffold's `lab-prereqs` namespace carries the label.
+  - `make bootstrap` labels the Showroom namespace before applying the parent.
+  - The children retry while the grant lands.
+
+  A cluster-wide grant
+  (`oc adm policy add-cluster-role-to-user cluster-admin -z openshift-gitops-argocd-application-controller -n openshift-gitops`)
+  is needed only when the chart itself manages cluster-scoped resources
+  beyond Namespaces, RBAC and OLM Subscriptions, which the default controller
+  already handles. Examples are a DataScienceCluster or TektonConfig. In that
+  case it is a documented facilitator prerequisite needing the cluster
+  owner's approval, removed at teardown.
 - **The Showroom chart always creates a 5Gi RWO PVC** (terminal on or off),
   so a default StorageClass is a hard requirement.
 - **Per-event values** (bucket endpoint, model URL) live on an event branch.

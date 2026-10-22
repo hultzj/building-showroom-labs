@@ -4,6 +4,8 @@ metadata:
   name: {{ required "lab.namespace is required" .Values.lab.namespace }}
   labels:
     demo.redhat.com/application: field-content
+    # The OpenShift GitOps operator grants this Argo CD instance admin here; no cluster-wide grant needed.
+    argocd.argoproj.io/managed-by: {{ .Values.argocdNamespace }}
 ---
 # The Showroom terminal runs as the showroom ServiceAccount, and anyone with the
 # Showroom URL can use it. Grant read on what the exercises inspect and write only

@@ -5,3 +5,4 @@ showroom:
   namespace: showroom
 deployer:
   domain: ""
+argocdNamespace: openshift-gitops

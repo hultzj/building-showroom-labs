@@ -15,11 +15,13 @@ RHDP clusters come with these in place. A bare test cluster needs:
 - **Argo CD permission to create the lab's resources.** On RHDP the
   application controller can do this. A fresh OpenShift GitOps install's
   default controller can create Namespaces, RBAC and ConfigMaps, but not
-  Deployments, Services or Routes, so the first sync fails `forbidden`.
+  Deployments, Services or Routes, except in namespaces labelled
+  `argocd.argoproj.io/managed-by`. The scaffold labels its namespaces (see
+  `environments.md`), so namespace-scoped labs need no extra grant.
   Check with `oc auth can-i create deployments -n <ns>
   --as=system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller`.
-  Ask the cluster owner before granting more, because the grant is
-  cluster-wide. On a test cluster the grant is setup only and stays out of
+  If the chart manages cluster-scoped resources, ask the cluster owner before
+  granting more, because that grant is cluster-wide. On a test cluster the grant is setup only and stays out of
   the lab repo.
 
 ## 2. Deploy

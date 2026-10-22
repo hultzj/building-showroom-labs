@@ -63,6 +63,8 @@ run_verify 'lab Synced/Healthy lab\n' \
   && bad "verify fails without the showroom child" || ok "verify fails without the showroom child"
 run_verify "${healthy}lab-v2 Synced/Healthy lab-v2\nlab-v2-showroom OutOfSync/Degraded lab-v2\n" \
   && ok "a lab whose name extends this one's does not fail it" || bad "a lab whose name extends this one's does not fail it"
+run_verify "lab OutOfSync/Degraded\nlab-showroom Synced/Healthy lab\n" \
+  && bad "verify judges an unlabeled parent by name (RHDP)" || ok "verify judges an unlabeled parent by name (RHDP)"
 FAKE_NO_ROUTE=1 run_verify "$healthy" \
   && bad "verify fails when the Showroom route is missing" || ok "verify fails when the Showroom route is missing"
 FAKE_CURL_RC=22 run_verify "$healthy" \
@@ -70,6 +72,15 @@ FAKE_CURL_RC=22 run_verify "$healthy" \
 
 n_label=$(grep -c 'app.kubernetes.io/part-of: t$' <<<"$apps" || true)
 [[ $n_label == "$n_apps" ]] && ok "every child Application is labeled part-of its parent" || bad "every child Application is labeled part-of its parent ($n_label of $n_apps)"
+
+# Argo CD's default controller gets admin in namespaces labeled managed-by; no cluster-admin needed.
+prereqs=$(helm template t "$SCAFFOLD/automation/argocd/components/lab-prereqs" --set lab.namespace=ns1)
+grep -q 'argocd.argoproj.io/managed-by: openshift-gitops' <<<"$prereqs" \
+  && ok "lab namespace is labeled for the Argo CD instance" || bad "lab namespace is labeled for the Argo CD instance"
+make -n -f "$SCAFFOLD/automation/Makefile" bootstrap | grep -q 'argocd.argoproj.io/managed-by=' \
+  && ok "bootstrap labels the Showroom namespace first" || bad "bootstrap labels the Showroom namespace first"
+n_retry=$(grep -c '^    retry:' <<<"$apps" || true)
+[[ $n_retry == "$n_apps" ]] && ok "every child Application retries (grant arrives after the namespace)" || bad "every child Application retries ($n_retry of $n_apps)"
 
 # Every image the Showroom child runs is pinned by digest, not a moving tag.
 grep -q 'image: .*@sha256:' <<<"$apps" && ok "Showroom terminal image is digest-pinned" || bad "Showroom terminal image is digest-pinned"

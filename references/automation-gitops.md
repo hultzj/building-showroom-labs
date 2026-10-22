@@ -94,7 +94,9 @@ Argo CD tracking annotation and are never pruned.
 - `verify.sh` uses a `check "<name>" <command>` helper that prints PASS or
   FAIL per lab prerequisite and exits non-zero if any fail. The facilitator
   runs it before class as cluster-admin, so permission checks and probes
-  impersonate the terminal (`--as "$TERMINAL_SA"`).
+  impersonate the participant identity from `environments.md`: the terminal
+  ServiceAccount (`--as "$TERMINAL_SA"`), or a participant user
+  (`--as userN --as-group system:authenticated --as-group system:authenticated:oauth`).
 - `teardown` deletes the parent Application. Its
   `resources-finalizer.argocd.argoproj.io` finalizer cascades the delete to
   the children and their resources.
