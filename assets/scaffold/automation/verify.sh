@@ -4,6 +4,7 @@ set -uo pipefail
 
 GITOPS_NS=${GITOPS_NS:-openshift-gitops}
 SHOWROOM_NS=${SHOWROOM_NS:-showroom}
+LAB_NS=${LAB_NS:-CHANGE-ME}
 failed=0
 
 check() {
@@ -34,6 +35,6 @@ showroom_answers() {
 check "lab Applications are Synced/Healthy" apps_synced_healthy
 check "Showroom route answers" showroom_answers
 # CHANGE-ME: one check per prerequisite the exercises assume, e.g.
-# check "demo workload ready" oc -n <ns> rollout status deploy/<name> --timeout=10s
+# check "demo workload ready" oc -n "$LAB_NS" rollout status deploy/<name> --timeout=10s
 
 exit "$failed"

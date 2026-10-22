@@ -11,13 +11,19 @@ RHDP clusters come with these in place. A bare test cluster needs:
   If it is missing, ask the cluster owner before installing it; it is a
   cluster-wide operator.
 - **Argo CD permission to create the lab's resources.** On RHDP the
-  application controller can do this. On a bare cluster, the first sync
-  usually fails with `forbidden` on Namespaces or RoleBindings. Fix it with
-  the smallest grant that works, and ask the cluster owner first, because the
-  grant is cluster-wide. That grant is test-cluster setup only, so it never
-  goes into the lab repo.
+  application controller can do this. A fresh OpenShift GitOps install's
+  default controller can create Namespaces, RBAC and ConfigMaps, but not
+  Deployments, Services or Routes, so the first sync fails `forbidden`.
+  Check with `oc auth can-i create deployments -n <ns>
+  --as=system:serviceaccount:openshift-gitops:openshift-gitops-argocd-application-controller`.
+  Ask the cluster owner before granting more, because the grant is
+  cluster-wide. That grant is test-cluster setup only, so it never goes into
+  the lab repo.
 
 ## 2. Deploy
+
+The first push turns CI red on purpose: strict `check-lab.sh` fails until
+every step is verified.
 
 ```bash
 git push origin main                 # Argo CD syncs from the remote, not your checkout
@@ -62,4 +68,5 @@ A step that only works the second time is not idempotent; fix it.
 
 - `bash scripts/check-lab.sh` (strict) and `npm run build` pass.
 - Push the verified guide. Leave the test cluster as you found it: tear the
-  lab down, and tell the owner what test-cluster setup from step 1 remains.
+  lab down promptly (the Showroom terminal is open to anyone with its URL),
+  and tell the owner what test-cluster setup from step 1 remains.

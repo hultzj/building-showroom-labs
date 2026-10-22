@@ -15,12 +15,21 @@ Expected result: CHANGE-ME
 == Remove the lab environment (cluster owner only)
 
 Do not run this on a facilitator-managed cluster. From a cluster-admin shell
-in a checkout of this repository:
+in a checkout of this repository, first look at what the teardown will
+delete. Every Application listed goes, along with everything it created:
 
-[source,bash]
+[source,bash,subs="attributes+"]
+----
+make -C automation status
+oc get namespace {lab_namespace} {showroom_namespace}
+----
+
+Then delete it and confirm the namespaces are gone:
+
+[source,bash,subs="attributes+"]
 ----
 make -C automation teardown
+oc get namespace {lab_namespace} {showroom_namespace}
 ----
 
-Deleting the parent Application removes the Showroom and lab prerequisites
-it created.
+The last command reports both namespaces `NotFound` once deletion completes.

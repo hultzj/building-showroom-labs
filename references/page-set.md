@@ -6,8 +6,8 @@ drafts you want kept but unpublished in `content/extra/`, outside `pages/`.
 
 | File | Sections, in order |
 |---|---|
-| `index.adoc` | One-line tagline · what the lab examines and why · numbered task list · Learning objectives · How to run the workshop (command completion is not proof) · Choose your track (only with more than one track) · Workshop map table: Module / Outcome / Time, with a track total · Technical model (each layer in one sentence, what none covers alone) · Start here |
-| `01-overview.adoc` | Control questions (the customer's questions, answered with evidence) · The stack table: Layer / Component / Responsibility · the one distinction learners must be able to explain · Workshop progression (one short `===` per module) · Interpretation guardrails (what is *not* claimed) |
+| `index.adoc` | One-line tagline · what the lab examines and why · numbered task list · Learning objectives · How to run the lab (command completion is not proof) · Choose your track (only with more than one track) · Lab map table: Module / Outcome / Time, with a track total · Technical model (each layer in one sentence, what none covers alone) · Start here |
+| `01-overview.adoc` | Control questions (the customer's questions, answered with evidence) · The stack table: Layer / Component / Responsibility · the one distinction learners must be able to explain · Lab progression (one short `===` per module) · Interpretation guardrails (what is *not* claimed) |
 | `02-details.adoc` | What you need: table by role · Provided by the facilitator · Verify the tools · Pre-flight: `oc whoami` plus one `oc auth can-i` per permission the exercises need, run from the Showroom terminal · Access details table |
 | `NN-module-MM-<slug>.adoc` | The module template below |
 | `90-cleanup.adoc` | Participant-local cleanup first, then cluster-owner cleanup with a look-before-delete check |
@@ -41,8 +41,9 @@ the filled-in skeleton. Its parts, in order:
 ## AsciiDoc idioms
 
 - Participant commands: `[source,bash,role="execute",subs="attributes+"]`. Showroom adds a click-to-run button to `role="execute"` blocks.
+- Every block that shows a lab name uses `subs="attributes+"`, including non-execute blocks. Without it `{name}` renders literally with no warning; `check-lab.sh` catches that in `www/`.
 - With `subs="attributes+"`, `{name}` is an attribute. Write shell variables as `$VAR`, never `${VAR}`, and escape literal braces (`'%\{http_code\}'`). `attribute-missing: warn` plus `--log-failure-level warn` fails the build on a mistake.
 - Long waits, PID-checked kills and full scripted checks go in `[%collapsible]` blocks so the main path stays short.
 - Admonitions are rare: `[IMPORTANT]` for safety boundaries, `[CAUTION]` for destructive or irreversible steps.
-- Use one `[mermaid]` diagram where the flow itself is the lesson. No screenshots; they drift.
+- Use one `[mermaid]` diagram where the flow itself is the lesson. The pinned mermaid extension cannot substitute attributes, so hard-code names in the diagram. No screenshots; they drift.
 - Links that leave the site: `link:https://...[text^]`. Cross-page: `xref:file.adoc[text]`.

@@ -13,6 +13,8 @@ fresh() {
   grep -rlI 'CHANGE-ME' "$work/lab" | grep -v check-lab.sh | while read -r f; do
     sed -i.bak 's/03-module-01-CHANGE-ME/03-module-01-intro/g; s/CHANGE-ME/filled/g' "$f" && rm "$f.bak"
   done
+  # Stand-in for `npm run build` output.
+  mkdir -p "$work/lab/www/modules" && echo '<code>oc -n netpol-demo get pods</code>' > "$work/lab/www/modules/index.html"
 }
 expect() { # expect pass|fail "<case>" <args...>
   local want=$1 name=$2; shift 2
@@ -39,6 +41,18 @@ expect fail "execute block followed by another block without Expected result" --
 fresh
 printf '\n[source,bash,role="execute"]\n----\ntrue\n----\n' >> "$work/lab/content/modules/ROOT/pages/91-reference.adoc"
 expect fail "execute block at end of file without Expected result" --draft
+
+fresh
+printf '\n[source,bash,role=execute]\n----\ntrue\n----\n' >> "$work/lab/content/modules/ROOT/pages/91-reference.adoc"
+expect fail "unquoted role=execute block without Expected result" --draft
+
+fresh
+echo '<code>oc -n {lab_namespace} get pods</code>' > "$work/lab/www/modules/x.html"
+expect fail "defined attribute rendered literally in the HTML" --draft
+
+fresh
+rm -rf "$work/lab/www"
+expect fail "no build output to inspect" --draft
 
 fresh
 sed -i.bak '/^== Evidence checkpoint$/d' "$page" && rm "$page.bak"

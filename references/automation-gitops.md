@@ -36,11 +36,22 @@ automation/
 ## The Showroom terminal identity
 
 The Showroom terminal runs as the `showroom` ServiceAccount in the `showroom`
-namespace. It gets `edit` there and nothing else. Every permission an
-exercise needs elsewhere has to be a RoleBinding in `lab-prereqs`, scoped to
-the lab namespace, using the smallest ClusterRole that works (`edit`, `view`,
-or a custom Role). The pre-flight on `02-details.adoc` checks those same
-permissions with `oc auth can-i`.
+namespace, where it has `edit`. The Showroom Route has no login, so **anyone
+with the URL holds these permissions.** Every permission an exercise needs
+elsewhere is a Role and RoleBinding in `lab-prereqs`, scoped to the lab
+namespace:
+
+- read (`get`, `list`, `watch`) on what the exercises inspect;
+- write only on what they change;
+- `pods/exec` (`create`, `get`) when a step runs `oc exec`.
+
+Do not use `ClusterRole edit`: it lets a participant relabel pods or edit
+workloads and walk around the control the lab teaches. The pre-flight on
+`02-details.adoc` checks the same permissions with `oc auth can-i`.
+
+Workload settings (images, ports, names) live in the component's
+`values.yaml`. The guide repeats the names it shows as `antora.yml`
+attributes. That duplication is accepted: the live pass catches drift.
 
 ## Drift that exercises cause on purpose
 

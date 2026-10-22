@@ -5,7 +5,24 @@ metadata:
   labels:
     demo.redhat.com/application: field-content
 ---
-# The Showroom terminal runs as this ServiceAccount; grant only what the exercises need.
+# The Showroom terminal runs as the showroom ServiceAccount, and anyone with the
+# Showroom URL can use it. Grant read on what the exercises inspect and write only
+# on what they change, never ClusterRole edit, which could let a participant
+# bypass the control the lab teaches.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: showroom-terminal
+  namespace: {{ .Values.lab.namespace }}
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "services", "events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create", "get"]
+  # CHANGE-ME: add exactly the resources and verbs the exercises change.
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
@@ -13,8 +30,8 @@ metadata:
   namespace: {{ .Values.lab.namespace }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: edit
+  kind: Role
+  name: showroom-terminal
 subjects:
   - kind: ServiceAccount
     name: showroom
