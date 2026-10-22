@@ -42,6 +42,11 @@ run_verify 'lab-showroom Synced/Healthy\nlab-prereqs OutOfSync/Healthy\n' \
   && bad "verify fails when an Application is OutOfSync" || ok "verify fails when an Application is OutOfSync"
 run_verify 'other-showroom Synced/Healthy\nother-prereqs Synced/Healthy\n' \
   && bad "verify fails when only another lab's Applications exist" || ok "verify fails when only another lab's Applications exist"
+FAKE_APPS='lab-v1-showroom Synced/Healthy\nlab-v1-prereqs Synced/Healthy\n' PATH="$fake:$PATH" LAB_NS=ns LAB_APP=lab.v1 \
+  bash "$SCAFFOLD/automation/verify.sh" >/dev/null 2>&1 \
+  && bad "a dot in LAB_APP matches only a literal dot" || ok "a dot in LAB_APP matches only a literal dot"
+run_verify "${healthy}other-prereqs OutOfSync/Healthy\n" \
+  && ok "another lab's unhealthy Application does not fail this lab" || bad "another lab's unhealthy Application does not fail this lab"
 FAKE_NO_ROUTE=1 run_verify "$healthy" \
   && bad "verify fails when the Showroom route is missing" || ok "verify fails when the Showroom route is missing"
 FAKE_CURL_RC=22 run_verify "$healthy" \

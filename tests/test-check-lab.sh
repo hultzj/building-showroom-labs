@@ -28,7 +28,7 @@ expect fail "untouched scaffold fails on CHANGE-ME" --draft
 
 fresh
 expect pass "filled scaffold passes in draft mode" --draft
-echo 'CHANGE-ME' >> "$work/lab/automation/argocd/values.yaml"
+echo '# CHANGE-ME' >> "$work/lab/automation/argocd/values.yaml"
 expect fail "one leftover CHANGE-ME fails" --draft
 
 fresh
@@ -61,6 +61,10 @@ expect fail "no build output to inspect" --draft
 fresh
 echo '{{ .Values.missing.key }}' >> "$work/lab/automation/argocd/templates/applications.yaml"
 expect fail "chart that does not render" --draft
+
+fresh
+sed -i.bak 's/^  namespace: filled$/  namespace: ""/' "$work/lab/automation/argocd/values.yaml" && rm "$work/lab/automation/argocd/values.yaml.bak"
+expect fail "empty lab namespace does not render" --draft
 
 fresh
 sed -i.bak '/^== Evidence checkpoint$/d' "$page" && rm "$page.bak"
