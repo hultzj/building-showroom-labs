@@ -122,6 +122,10 @@ printf '\nimage::01-console.png[alt="",width=600]\n' >> "$work/lab/content/modul
 expect fail "image with empty named alt text" --draft
 
 fresh
+printf '\nimage::01-console.png[alt="  ",width=600]\n' >> "$work/lab/content/modules/ROOT/pages/91-reference.adoc"
+expect fail "image whose alt text is only spaces" --draft
+
+fresh
 printf '\nimage::01-console.png[The Projects page listing your project]\n' >> "$work/lab/content/modules/ROOT/pages/91-reference.adoc"
 expect pass "image with alt text" --draft
 

@@ -104,7 +104,12 @@ cat > "$fake/curl" <<'SH'
 #!/usr/bin/env bash
 [[ " $* " =~ \ -[a-zA-Z]*I ]] || exit 0
 echo "$*" >> "$FAKE_CURL_LOG"
-[[ -n ${FAKE_REDIRECT:-} ]] && printf 'HTTP/1.1 302 Found\r\nlocation: https://x\r\n\r\n'
+if [[ -n ${FAKE_REDIRECT:-} ]]; then  # like curl: the final response only follows with -L
+  printf 'HTTP/1.1 302 Found\r\nlocation: https://x\r\n'
+  [[ -n ${FAKE_XFO_FIRST:-} ]] && printf 'x-frame-options: %s\r\n' "$FAKE_XFO_FIRST"
+  printf '\r\n'
+  [[ " $* " =~ \ -[a-zA-Z]*L ]] || exit 0
+fi
 printf 'HTTP/1.1 %s\r\n' "${FAKE_STATUS:-200 OK}"
 [[ -n ${FAKE_XFO:-} ]] && printf 'x-frame-options: %s\r\n' "$FAKE_XFO"
 [[ -n ${FAKE_CSP:-} ]] && printf 'content-security-policy: %s\r\n' "$FAKE_CSP"
@@ -118,12 +123,17 @@ tabfail() { grep -q 'FAIL: Showroom tab' "$fake/verify.out"; }
 cverify FAKE_XFO=DENY && bad "verify exits non-zero when a tab target refuses framing (X-Frame-Options)" || { tabfail && ok "verify exits non-zero when a tab target refuses framing (X-Frame-Options)" || bad "verify exits non-zero when a tab target refuses framing (X-Frame-Options)"; }
 cverify FAKE_CSP="default-src 'self'; frame-ancestors 'self'" && bad "an enforced CSP frame-ancestors also refuses framing" || ok "an enforced CSP frame-ancestors also refuses framing"
 cverify FAKE_STATUS='503 Service Unavailable' && bad "a tab target answering 503 fails" || ok "a tab target answering 503 fails"
-cverify FAKE_REDIRECT=1 FAKE_XFO=DENY && bad "headers are judged after following redirects" || ok "headers are judged after following redirects"
+cverify FAKE_REDIRECT=1 FAKE_XFO=DENY && bad "a redirect to a page refusing framing fails" || ok "a redirect to a page refusing framing fails"
+cverify FAKE_REDIRECT=1 FAKE_XFO_FIRST=DENY && ok "only the final response after redirects is judged" || bad "only the final response after redirects is judged"
+cverify FAKE_CSP="frame-ancestors https://*.other.example" && bad "a scoped wildcard in frame-ancestors still refuses framing" || ok "a scoped wildcard in frame-ancestors still refuses framing"
+cverify FAKE_CSP="FRAME-ANCESTORS *" && ok "CSP directive names are case-insensitive" || bad "CSP directive names are case-insensitive"
 cverify && grep -q 'PASS: Showroom tab' "$fake/verify.out" && ok "a frameable tab target passes (report-only CSP ignored)" || bad "a frameable tab target passes (report-only CSP ignored)"
 grep -q 'https://console-openshift-console.apps.example.com' "$FAKE_CURL_LOG" && ok "\${DOMAIN} in tab URLs is filled in from the cluster" || bad "\${DOMAIN} in tab URLs is filled in from the cluster"
 sed -i.bak "s|url: 'https://console-openshift-console.\${DOMAIN}'|url: 'https://my-console.example.org'|" "$lab/ui-config.yml"
 cverify FAKE_XFO=DENY || true; tabfail && ok "a tab on a custom hostname is still checked" || bad "a tab on a custom hostname is still checked"
-sed -i.bak '/OpenShift Console/,+1d' "$lab/ui-config.yml"
+printf '  - url: https://dashboard.example.org\n    name: Dashboard\n' >> "$lab/ui-config.yml"
+cverify || true; grep -q 'dashboard.example.org' "$FAKE_CURL_LOG" && ok "a tab written url-first is still checked" || bad "a tab written url-first is still checked"
+sed -i.bak '/OpenShift Console/,+1d; /dashboard.example.org/,+1d' "$lab/ui-config.yml"
 cverify FAKE_XFO=DENY || true; grep -q 'Showroom tab' "$fake/verify.out" && bad "no tab check when ui-config has no url tabs" || ok "no tab check when ui-config has no url tabs"
 rm -rf "$lab"
 grep -qx '.playwright-mcp/' "$SCAFFOLD/.gitignore" && ok "Playwright auth state is gitignored" || bad "Playwright auth state is gitignored"

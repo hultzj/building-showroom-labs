@@ -53,13 +53,14 @@ frameable() {
   last=$(awk '/^HTTP\// {b = ""} {b = b $0 "\n"} END {printf "%s", b}' <<<"$headers" | tr -d '\r')
   grep -qE '^HTTP/[0-9.]+ 2[0-9][0-9]' <<<"$last" || return 1
   ! grep -qi '^x-frame-options:' <<<"$last" || return 1
-  ! grep -i '^content-security-policy:' <<<"$last" | grep -i 'frame-ancestors' | grep -vq 'frame-ancestors[^;]*\*'
+  # An enforced frame-ancestors must contain a bare * source; a scoped wildcard (https://*.x) is not enough.
+  ! grep -i '^content-security-policy:' <<<"$last" | grep -i 'frame-ancestors' | grep -viqE 'frame-ancestors( [^;]*)? \*( |;|$)'
 }
 
 check "lab Applications are Synced/Healthy" apps_synced_healthy
 check "Showroom route answers" showroom_answers
 domain=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}' 2>/dev/null || true)
-for url in $(awk '$1 == "url:" {print $2}' "$(dirname "$0")/../ui-config.yml" 2>/dev/null | tr -d "'\""); do
+for url in $(awk '{sub(/^[[:space:]]*-[[:space:]]*/, "")} $1 == "url:" {print $2}' "$(dirname "$0")/../ui-config.yml" 2>/dev/null | tr -d "'\""); do
   url=$(sed "s|\${DOMAIN}|$domain|g" <<<"$url")
   check "Showroom tab $url can embed (2xx, framing allowed)" frameable "$url"
 done
