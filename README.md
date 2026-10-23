@@ -64,7 +64,7 @@ The skill then works through these steps, asking you for anything it needs:
 | `bash scripts/check-lab.sh --draft` | Checks the lab's structure while you draft |
 | `bash scripts/check-lab.sh` | Release check: also fails while any step is still marked `// UNVERIFIED` (CI runs this) |
 | `make -C automation help` | Lists the targets below |
-| `make -C automation bootstrap` | Deploys the lab through OpenShift GitOps on a cluster without an RHDP order. Requires the pushed revision with no local changes; refuses to take over a namespace that is not this lab's. `REVISION=<branch>` deploys an event branch |
+| `make -C automation bootstrap` | Deploys the lab through OpenShift GitOps on a cluster without an RHDP order. Requires the pushed revision with no local changes; refuses to take over a namespace that is not this lab's |
 | `make -C automation status` | Shows sync and health of the lab's Argo CD Applications |
 | `make -C automation verify` | Facilitator readiness check: one PASS/FAIL line per prerequisite, checked as the participant |
 | `make -C automation teardown` | Deletes the lab's Applications and everything they created |
@@ -72,15 +72,25 @@ The skill then works through these steps, asking you for anything it needs:
 On an RHDP order, skip `bootstrap`: order the Field Content CI with the lab's
 repository URL and the path `automation/argocd`.
 
+**Event branches.** Event-specific values (a bucket endpoint, a model URL) go on
+a branch. On that branch, set `gitops.revision` in
+`automation/argocd/values.yaml` to the branch name, commit, push, check the
+branch out, and run `make -C automation bootstrap`. It deploys that revision.
+
 ## Requirements
 
 - **To build and check a lab:** git, Node.js 22 with npm, Helm 3, bash, make,
   awk.
-- **To deploy and verify it:** `oc`, logged in to an OpenShift cluster that
-  has OpenShift GitOps. The lab repository must be reachable by Argo CD
-  (usually a GitHub repository).
+- **To deploy and verify it:** `oc` and `curl`.
+  - **Cluster:** OpenShift with OpenShift GitOps and a default StorageClass
+    (Showroom always creates a PVC).
+  - **Permissions:** you must be logged in with cluster-admin or equivalent
+    rights. `bootstrap` creates and labels namespaces, and `verify`
+    impersonates participants.
+  - **Repository:** Argo CD must be able to reach the lab repository (usually
+    a GitHub repository).
 - **For GUI steps:** the Playwright plugin for Claude Code.
-- **For the skill's own tests:** Ruby, used to parse YAML.
+- **For the skill's own tests:** Ruby (to parse YAML) and Python 3.
 
 ## Repository layout
 
