@@ -39,6 +39,28 @@ want, for example:
 > Build a Showroom lab that teaches default-deny NetworkPolicy on OpenShift,
 > about 45 minutes, one cluster per participant.
 
+A complete prompt answers the skill's intake questions up front, so it can go
+straight to planning. Copy this one and change the details:
+
+```text
+Use the building-showroom-labs skill to build a new Showroom lab.
+
+Topic: Serving a model with OpenShift AI and controlling who can call it.
+Audience: application developers new to OpenShift AI.
+Customer question: "Can we serve models on our own cluster and prove only
+approved apps can reach them?"
+Modules:
+  1. Deploy a small CPU model with KServe in your project and query it.
+  2. Restrict access to the model endpoint, prove an unapproved client is
+     refused, then restore.
+Products: OpenShift 4.20+, OpenShift AI 3.x (already installed).
+Time: one track, about 60 minutes.
+Environment: RHDP order, one dedicated cluster per participant. GitOps
+deploys the prerequisites; participants do the exercises.
+Repo Argo CD will sync: https://github.com/<you>/<lab-repo>.git (public).
+Test cluster for live verification: I am logged in with oc (cluster-admin).
+```
+
 The skill then works through these steps, asking you for anything it needs:
 
 1. **Intake.** Topic, audience and the customer question each module answers;
