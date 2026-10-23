@@ -44,20 +44,25 @@ showroom_answers() {
   curl -fsk --max-time 10 -o /dev/null "https://$host"
 }
 
-# The Showroom console tab is an iframe; a console that sends X-Frame-Options (DENY by default)
-# renders as a blank tab. RHDP orders embed the console; elsewhere, drop the tab or get the owner's OK.
-console_frameable() {
-  local url headers
-  url=$(oc whoami --show-console) || return 1
-  headers=$(curl -skI --max-time 10 "$url") || return 1
-  ! grep -qi '^x-frame-options:' <<<"$headers"
+# Every url: tab in ui-config.yml is an iframe: its target must answer 2xx (after redirects) and allow
+# framing. A default OpenShift console sends X-Frame-Options: DENY and renders as a blank tab; RHDP
+# orders embed it, elsewhere drop the tab or get the cluster owner's OK. Report-only CSP is ignored.
+frameable() {
+  local headers last
+  headers=$(curl -skIL --max-time 10 "$1") || return 1
+  last=$(awk '/^HTTP\// {b = ""} {b = b $0 "\n"} END {printf "%s", b}' <<<"$headers" | tr -d '\r')
+  grep -qE '^HTTP/[0-9.]+ 2[0-9][0-9]' <<<"$last" || return 1
+  ! grep -qi '^x-frame-options:' <<<"$last" || return 1
+  ! grep -i '^content-security-policy:' <<<"$last" | grep -i 'frame-ancestors' | grep -vq 'frame-ancestors[^;]*\*'
 }
 
 check "lab Applications are Synced/Healthy" apps_synced_healthy
 check "Showroom route answers" showroom_answers
-if grep -q 'console-openshift-console' "$(dirname "$0")/../ui-config.yml" 2>/dev/null; then
-  check "Showroom console tab can embed the console (no X-Frame-Options)" console_frameable
-fi
+domain=$(oc get ingresses.config.openshift.io cluster -o jsonpath='{.spec.domain}' 2>/dev/null || true)
+for url in $(awk '$1 == "url:" {print $2}' "$(dirname "$0")/../ui-config.yml" 2>/dev/null | tr -d "'\""); do
+  url=$(sed "s|\${DOMAIN}|$domain|g" <<<"$url")
+  check "Showroom tab $url can embed (2xx, framing allowed)" frameable "$url"
+done
 # CHANGE-ME: one check per prerequisite the exercises assume, e.g.
 # check "demo workload ready" oc -n "$LAB_NS" rollout status deploy/<name> --timeout=10s
 # check "terminal can <verb> <resource>" oc auth can-i <verb> <resource> -n "$LAB_NS" --as "$TERMINAL_SA"

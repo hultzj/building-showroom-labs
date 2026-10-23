@@ -48,8 +48,10 @@ re-sync. Do not patch the cluster by hand.
 - Open the Showroom route (`oc -n showroom get route showroom`) and confirm
   every page renders. Rendering checks: attributes are substituted, user_data
   values such as the cluster domain show real values, the terminal tab
-  connects, and the console tab shows the console rather than a blank frame.
-  `verify.sh` checks the console's framing headers.
+  connects, and every `url:` tab in `ui-config.yml` (the console, a dashboard)
+  shows its page rather than a blank frame. `verify.sh` checks each tab
+  target's status and framing headers. A lab that links the console instead
+  of tabbing it has nothing to check here.
 - Walk as the participant identity from `environments.md`. With the
   ServiceAccount identity, run each `role="execute"` block in page order
   **from the Showroom terminal**. The terminal runs as the `showroom` ServiceAccount, and a

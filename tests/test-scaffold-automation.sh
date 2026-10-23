@@ -43,7 +43,7 @@ case "$*" in
   *route*) [[ -n ${FAKE_NO_ROUTE:-} ]] && exit 1; printf 'showroom.example.test' ;;
 esac
 SH
-printf '#!/usr/bin/env bash\nexit "${FAKE_CURL_RC:-0}"\n' > "$fake/curl"
+printf '#!/usr/bin/env bash\n[[ " $* " =~ \\ -[a-zA-Z]*I ]] && printf "HTTP/1.1 200 OK\\r\\n"\nexit "${FAKE_CURL_RC:-0}"\n' > "$fake/curl"
 chmod +x "$fake/oc" "$fake/curl"
 run_verify() { FAKE_APPS=$1 PATH="$fake:$PATH" LAB_NS=ns LAB_APP=lab bash "$SCAFFOLD/automation/verify.sh" >/dev/null 2>&1; }
 healthy='lab Synced/Healthy lab\nlab-showroom Synced/Healthy lab\nlab-prereqs Synced/Healthy lab\n'
@@ -90,30 +90,45 @@ grep -q 'argocd.argoproj.io/managed-by=' <<<"$(make -n -f "$SCAFFOLD/automation/
 n_retry=$(grep -c '^    retry:' <<<"$apps" || true)
 [[ $n_retry == "$n_apps" ]] && ok "every child Application retries (grant arrives after the namespace)" || bad "every child Application retries ($n_retry of $n_apps)"
 
-# verify.sh: the Showroom console tab only renders if the console allows framing.
+# verify.sh: every external (url:) tab is an iframe and only renders if its target allows framing.
 lab=$(mktemp -d); cp -R "$SCAFFOLD/." "$lab/"
 cat > "$fake/oc" <<'SH'
 #!/usr/bin/env bash
 case "$*" in
-  *"whoami --show-console"*) echo "https://console.example.com" ;;
+  *ingresses.config*) printf 'apps.example.com' ;;
   *applications.argoproj.io*) printf 'lab Synced/Healthy lab\nlab-showroom Synced/Healthy lab\n' ;;
   *route*) printf 'showroom.example.test' ;;
 esac
 SH
 cat > "$fake/curl" <<'SH'
 #!/usr/bin/env bash
-[[ " $* " =~ \ -[a-zA-Z]*I ]] && { printf 'HTTP/1.1 200 OK\r\n'; [[ -n ${FAKE_XFO:-} ]] && printf 'x-frame-options: %s\r\n' "$FAKE_XFO"; }
+[[ " $* " =~ \ -[a-zA-Z]*I ]] || exit 0
+echo "$*" >> "$FAKE_CURL_LOG"
+[[ -n ${FAKE_REDIRECT:-} ]] && printf 'HTTP/1.1 302 Found\r\nlocation: https://x\r\n\r\n'
+printf 'HTTP/1.1 %s\r\n' "${FAKE_STATUS:-200 OK}"
+[[ -n ${FAKE_XFO:-} ]] && printf 'x-frame-options: %s\r\n' "$FAKE_XFO"
+[[ -n ${FAKE_CSP:-} ]] && printf 'content-security-policy: %s\r\n' "$FAKE_CSP"
+printf 'content-security-policy-report-only: frame-ancestors '"'"'none'"'"'\r\n'
 exit 0
 SH
 chmod +x "$fake/oc" "$fake/curl"
-cverify() { env "$@" PATH="$fake:$PATH" LAB_NS=ns LAB_APP=lab bash "$lab/automation/verify.sh" 2>&1; }
-grep -q 'FAIL: Showroom console tab' <<<"$(cverify FAKE_XFO=DENY)" && ok "verify fails the console tab when the console refuses framing" || bad "verify fails the console tab when the console refuses framing"
-grep -q 'PASS: Showroom console tab' <<<"$(cverify)" && ok "verify passes the console tab when framing is allowed" || bad "verify passes the console tab when framing is allowed"
+export FAKE_CURL_LOG="$fake/curl.log"
+cverify() { : > "$FAKE_CURL_LOG"; env "$@" PATH="$fake:$PATH" LAB_NS=ns LAB_APP=lab bash "$lab/automation/verify.sh" > "$fake/verify.out" 2>&1; }
+tabfail() { grep -q 'FAIL: Showroom tab' "$fake/verify.out"; }
+cverify FAKE_XFO=DENY && bad "verify exits non-zero when a tab target refuses framing (X-Frame-Options)" || { tabfail && ok "verify exits non-zero when a tab target refuses framing (X-Frame-Options)" || bad "verify exits non-zero when a tab target refuses framing (X-Frame-Options)"; }
+cverify FAKE_CSP="default-src 'self'; frame-ancestors 'self'" && bad "an enforced CSP frame-ancestors also refuses framing" || ok "an enforced CSP frame-ancestors also refuses framing"
+cverify FAKE_STATUS='503 Service Unavailable' && bad "a tab target answering 503 fails" || ok "a tab target answering 503 fails"
+cverify FAKE_REDIRECT=1 FAKE_XFO=DENY && bad "headers are judged after following redirects" || ok "headers are judged after following redirects"
+cverify && grep -q 'PASS: Showroom tab' "$fake/verify.out" && ok "a frameable tab target passes (report-only CSP ignored)" || bad "a frameable tab target passes (report-only CSP ignored)"
+grep -q 'https://console-openshift-console.apps.example.com' "$FAKE_CURL_LOG" && ok "\${DOMAIN} in tab URLs is filled in from the cluster" || bad "\${DOMAIN} in tab URLs is filled in from the cluster"
+sed -i.bak "s|url: 'https://console-openshift-console.\${DOMAIN}'|url: 'https://my-console.example.org'|" "$lab/ui-config.yml"
+cverify FAKE_XFO=DENY || true; tabfail && ok "a tab on a custom hostname is still checked" || bad "a tab on a custom hostname is still checked"
 sed -i.bak '/OpenShift Console/,+1d' "$lab/ui-config.yml"
-grep -q 'console tab' <<<"$(cverify FAKE_XFO=DENY)" && bad "no console check when ui-config has no console tab" || ok "no console check when ui-config has no console tab"
+cverify FAKE_XFO=DENY || true; grep -q 'Showroom tab' "$fake/verify.out" && bad "no tab check when ui-config has no url tabs" || ok "no tab check when ui-config has no url tabs"
 rm -rf "$lab"
 grep -qx '.playwright-mcp/' "$SCAFFOLD/.gitignore" && ok "Playwright auth state is gitignored" || bad "Playwright auth state is gitignored"
 grep -q 'feature_maturity:' "$SCAFFOLD/content/antora.yml" && grep -q 'ifeval::\["{feature_maturity}" == "TP"\]' "$SCAFFOLD/content/modules/ROOT/pages/index.adoc" \
+  && grep -q 'ifeval::\["{feature_maturity}" == "DP"\]' "$SCAFFOLD/content/modules/ROOT/pages/index.adoc" && grep -q 'Developer Preview' "$SCAFFOLD/content/modules/ROOT/pages/index.adoc" \
   && ok "scaffold carries feature_maturity and its TP/DP banners" || bad "scaffold carries feature_maturity and its TP/DP banners"
 
 # Every image the Showroom child runs is pinned by digest, not a moving tag.

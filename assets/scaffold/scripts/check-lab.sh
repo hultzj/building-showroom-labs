@@ -119,7 +119,7 @@ else
 fi
 
 # Screenshots are live-captured evidence; each needs alt text for screen readers.
-if grep -nE '^image::[^[]+\[ *(,[^]]*)?\]' "$pages"/*.adoc >&2; then
+if grep -nE '^image::[^[]+\[ *(""|'"''"')? *(,[^]]*)?\]|^image::[^[]+\[([^]]*,)? *alt *= *(""|'"''"')? *(,[^]]*)?\]' "$pages"/*.adoc >&2; then
   fail "image without alt text: image::file.png[What the screenshot shows]"
 fi
 
