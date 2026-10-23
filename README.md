@@ -76,6 +76,7 @@ repository URL and the path `automation/argocd`.
 a branch. On that branch, set `gitops.revision` in
 `automation/argocd/values.yaml` to the branch name, commit, push, check the
 branch out, and run `make -C automation bootstrap`. It deploys that revision.
+On an RHDP order, give the branch in the order instead.
 
 ## Requirements
 
