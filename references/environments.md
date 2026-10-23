@@ -110,6 +110,7 @@ expectation to their username. Verification uses the same identity
   already handles. Examples are a DataScienceCluster or TektonConfig. In that
   case it is a documented facilitator prerequisite needing the cluster
   owner's approval, removed at teardown.
+- **The console tab.** `ui-config.yml`'s OpenShift Console tab is an iframe. A default console answers `X-Frame-Options: DENY` (verified on OpenShift 5.0), so the tab renders blank. RHDP orders embed the console with the `ocp4_workload_ocp_console_embed` workload. On a pre-existing cluster, remove the tab and link the console from the guide with `link:...[^]`, which opens a new browser tab. Embedding there is a cluster-wide ingress header change that needs the owner's approval. `verify.sh` fails while a console tab exists that cannot embed.
 - **The Showroom chart always creates a 5Gi RWO PVC** (terminal on or off),
   so a default StorageClass is a hard requirement.
 - **Per-event values** (bucket endpoint, model URL) live on an event branch

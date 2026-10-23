@@ -1,6 +1,16 @@
 = CHANGE-ME lab title
 :navtitle: Introduction
 
+ifeval::["{feature_maturity}" == "TP"]
+WARNING: This lab uses a *Technology Preview* feature. Technology Preview features are not
+supported with Red Hat production service-level agreements (SLAs) and might not be
+functionally complete.
+endif::[]
+ifeval::["{feature_maturity}" == "DP"]
+WARNING: This lab uses a *Developer Preview* feature. Developer Preview features are provided
+as-is, with no support and no guarantee of future availability.
+endif::[]
+
 CHANGE-ME one-line tagline.
 
 // What the lab examines, and why it matters outside the lab.

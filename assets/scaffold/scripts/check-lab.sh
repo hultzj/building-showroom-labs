@@ -118,6 +118,11 @@ else
   fi
 fi
 
+# Screenshots are live-captured evidence; each needs alt text for screen readers.
+if grep -nE '^image::[^[]+\[ *(,[^]]*)?\]' "$pages"/*.adoc >&2; then
+  fail "image without alt text: image::file.png[What the screenshot shows]"
+fi
+
 # The field-content Showroom builder (quay.io/rhpds/antora) has no mermaid extension.
 if grep -n '^\[mermaid' "$pages"/*.adoc >&2; then
   fail "[mermaid] blocks do not render in Showroom; use a table or numbered list"

@@ -110,6 +110,14 @@ sed -i.bak '/partOf: {{ .Release.Name | quote }}/d' "$work/lab/automation/argocd
 expect fail "parent no longer passes the ownership label to the component" --draft
 
 fresh
+printf '\nimage::01-console.png[]\n' >> "$work/lab/content/modules/ROOT/pages/91-reference.adoc"
+expect fail "image without alt text" --draft
+
+fresh
+printf '\nimage::01-console.png[The Projects page listing your project]\n' >> "$work/lab/content/modules/ROOT/pages/91-reference.adoc"
+expect pass "image with alt text" --draft
+
+fresh
 sed -i.bak '/^== Evidence checkpoint$/d' "$page" && rm "$page.bak"
 expect fail "module without Evidence checkpoint" --draft
 

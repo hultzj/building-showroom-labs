@@ -90,6 +90,32 @@ grep -q 'argocd.argoproj.io/managed-by=' <<<"$(make -n -f "$SCAFFOLD/automation/
 n_retry=$(grep -c '^    retry:' <<<"$apps" || true)
 [[ $n_retry == "$n_apps" ]] && ok "every child Application retries (grant arrives after the namespace)" || bad "every child Application retries ($n_retry of $n_apps)"
 
+# verify.sh: the Showroom console tab only renders if the console allows framing.
+lab=$(mktemp -d); cp -R "$SCAFFOLD/." "$lab/"
+cat > "$fake/oc" <<'SH'
+#!/usr/bin/env bash
+case "$*" in
+  *"whoami --show-console"*) echo "https://console.example.com" ;;
+  *applications.argoproj.io*) printf 'lab Synced/Healthy lab\nlab-showroom Synced/Healthy lab\n' ;;
+  *route*) printf 'showroom.example.test' ;;
+esac
+SH
+cat > "$fake/curl" <<'SH'
+#!/usr/bin/env bash
+[[ " $* " =~ \ -[a-zA-Z]*I ]] && { printf 'HTTP/1.1 200 OK\r\n'; [[ -n ${FAKE_XFO:-} ]] && printf 'x-frame-options: %s\r\n' "$FAKE_XFO"; }
+exit 0
+SH
+chmod +x "$fake/oc" "$fake/curl"
+cverify() { env "$@" PATH="$fake:$PATH" LAB_NS=ns LAB_APP=lab bash "$lab/automation/verify.sh" 2>&1; }
+grep -q 'FAIL: Showroom console tab' <<<"$(cverify FAKE_XFO=DENY)" && ok "verify fails the console tab when the console refuses framing" || bad "verify fails the console tab when the console refuses framing"
+grep -q 'PASS: Showroom console tab' <<<"$(cverify)" && ok "verify passes the console tab when framing is allowed" || bad "verify passes the console tab when framing is allowed"
+sed -i.bak '/OpenShift Console/,+1d' "$lab/ui-config.yml"
+grep -q 'console tab' <<<"$(cverify FAKE_XFO=DENY)" && bad "no console check when ui-config has no console tab" || ok "no console check when ui-config has no console tab"
+rm -rf "$lab"
+grep -qx '.playwright-mcp/' "$SCAFFOLD/.gitignore" && ok "Playwright auth state is gitignored" || bad "Playwright auth state is gitignored"
+grep -q 'feature_maturity:' "$SCAFFOLD/content/antora.yml" && grep -q 'ifeval::\["{feature_maturity}" == "TP"\]' "$SCAFFOLD/content/modules/ROOT/pages/index.adoc" \
+  && ok "scaffold carries feature_maturity and its TP/DP banners" || bad "scaffold carries feature_maturity and its TP/DP banners"
+
 # Every image the Showroom child runs is pinned by digest, not a moving tag.
 grep -q 'image: .*@sha256:' <<<"$apps" && ok "Showroom terminal image is digest-pinned" || bad "Showroom terminal image is digest-pinned"
 

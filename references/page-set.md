@@ -17,6 +17,13 @@ drafts you want kept but unpublished in `content/extra/`, outside `pages/`.
 `nav.adoc` groups modules under `.Track name (time)` captions and ends with
 `.Wrap-up` (cleanup, reference) and `.Facilitators`.
 
+## Grounding and product maturity
+
+- Commands, manifests and console paths come from the Red Hat product docs for the pinned version. Live verification proves a step works; the docs show it is the supported way.
+- The reference page lists the doc sections each module follows.
+- A step with no doc backing (a workaround, an upstream-only feature) gets an `// NOT-IN-DOCS: <reason>` comment above it and an entry under "What this lab does not prove".
+- Set `feature_maturity` in `content/antora.yml` to `GA`, `TP` or `DP`. The scaffold's `index.adoc` shows the Technology Preview or Developer Preview warning to match. A DP lab is a guided tour: fewer execute blocks, more observation.
+
 ## Module template
 
 `assets/scaffold/content/modules/ROOT/pages/03-module-01-CHANGE-ME.adoc` is
@@ -47,6 +54,16 @@ the filled-in skeleton. Its parts, in order:
 - Heredocs containing `$(…)` that the shell must not expand (Tekton params, scripts) use `<<'EOF'`.
 - Long waits, PID-checked kills and full scripted checks go in `[%collapsible]` blocks so the main path stays short.
 - Participants paste scripted assertions into their own shell, so wrap each one in `( ... )`: an `exit 1` on FAIL then ends the subshell, not their terminal session. End with `echo PASS`.
-- Admonitions are rare: `[IMPORTANT]` for safety boundaries, `[CAUTION]` for destructive or irreversible steps.
-- No Antora extensions: the field-content Showroom builder image (`quay.io/rhpds/antora`) has none, so `[mermaid]` and tabs fail or render raw. Show a flow as a table (source / destination / result / why) or a numbered list. No screenshots; they drift.
+- Admonitions are rare. Match the type to the intent:
+  - `TIP`: orientation, a useful shortcut.
+  - `NOTE`: expected friction or non-determinism.
+  - `IMPORTANT`: an ordering constraint or safety boundary the learner must not miss.
+  - `WARNING`: a destructive or irreversible step.
+- **Expected errors and warnings.** When a step is expected to print an error, a warning, or need a second run, put a `NOTE` *before* the command: what will happen, "This is expected.", and one sentence why. The Expected result then names that output. Deeper explanation goes in a `[%collapsible]` block.
+- **YAML callouts.** When the learner applies a manifest whose fields they must understand, show the key fields first in a non-execute `[source,yaml,subs="attributes+"]` block, with `# <1>` markers and a list below it in the form `<1> *Field* — one sentence.`
+  - Five callouts at most; skip self-explanatory fields.
+  - The block can be a trimmed excerpt.
+  - Then apply the full manifest in its own `role="execute"` block. Never put callout markers in an execute block: the copy button would copy them.
+- No Antora extensions: the field-content Showroom builder image (`quay.io/rhpds/antora`) has none, so `[mermaid]` and tabs fail or render raw. Show a flow as a table (source / destination / result / why) or a numbered list.
+- **Screenshots** are evidence from the live pass, never drawn or recalled. Capture each one with Playwright as the participant during verification, and save it to `content/modules/ROOT/assets/images/` with a step-based name (`03-create-project.png`). Embed it with `image::03-create-project.png[What the learner should see]`; alt text is required, and `check-lab.sh` enforces it. Re-capture every screenshot on each verification pass so none drifts from the product. Use them only for GUI steps, where they help the learner find the control.
 - Links that leave the site: `link:https://...[text^]`. Cross-page: `xref:file.adoc[text]`.

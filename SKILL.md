@@ -17,7 +17,7 @@ A lab is three things that must agree: the **guide** (Antora pages Showroom rend
 4. **Write pages.** Follow `references/page-set.md`. Every exercise and every `role="execute"` block gets `Expected result:` plus `// UNVERIFIED` until you have seen the result live.
 5. **Automation and GitOps.** Follow `references/automation-gitops.md`.
 6. **Local checks.** `npm run build`, then `bash scripts/check-lab.sh --draft`.
-7. **Review before deploy.** Run the reviews the user's instructions require (e.g. xreview, ponytail-review).
+7. **Review before deploy.** Run the reviews the user's instructions require (e.g. xreview, ponytail-review). If the RHDP marketplace's `showroom:verify-content` skill is installed, run it too for Red Hat style and accessibility.
 8. **Deploy and verify live.** Follow `references/verification.md`. Done when strict `bash scripts/check-lab.sh` passes and a clean re-run succeeds.
 
 ## Rules
@@ -26,7 +26,7 @@ A lab is three things that must agree: the **guide** (Antora pages Showroom rend
 - Every allow gets a deny that asserts the specific failure (exit code, error, event); every break gets a restore.
 - Behavior checks live in the guide (collapsible assertions) and `automation/verify.sh`. There is no separate test suite.
 - Commands are re-runnable (`oc apply`, or `delete --ignore-not-found` before `create`) and name their namespace.
-- Lab-owned images: `repo:tag@sha256:<index digest>`. No secrets in content.
+- Lab-owned images: `repo:tag@sha256:<index digest>`. No secrets in content; examples use `example.com` and `192.0.2.x`.
 
 ## Common mistakes (seen without this skill)
 

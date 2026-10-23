@@ -47,8 +47,9 @@ re-sync. Do not patch the cluster by hand.
 
 - Open the Showroom route (`oc -n showroom get route showroom`) and confirm
   every page renders. Rendering checks: attributes are substituted, user_data
-  values such as the cluster domain show real values, and the terminal tab
-  connects.
+  values such as the cluster domain show real values, the terminal tab
+  connects, and the console tab shows the console rather than a blank frame.
+  `verify.sh` checks the console's framing headers.
 - Walk as the participant identity from `environments.md`. With the
   ServiceAccount identity, run each `role="execute"` block in page order
   **from the Showroom terminal**. The terminal runs as the `showroom` ServiceAccount, and a
@@ -68,9 +69,14 @@ re-sync. Do not patch the cluster by hand.
 - **GUI steps:** drive them with the Playwright browser tools as the
   participant. Log in to the console or dashboard, click through the
   numbered steps, and take `browser_snapshot` to read the exact labels the
-  guide must quote. Save a screenshot per step to `evidence/`. Never put
-  screenshots in the guide. Record the product and console versions in
-  `PLAN.md`. Check every `GUI view:` claim the same way.
+  guide must quote. Save a screenshot per step to `evidence/`. Screenshots the
+  guide embeds are captured in this same pass, into
+  `content/modules/ROOT/assets/images/` (see `page-set.md`); replace them on
+  every pass. Record the product and console versions in `PLAN.md`. Check
+  every `GUI view:` claim the same way.
+- Never ask the user to paste credentials into the conversation. Read them
+  from a local file or environment variable. Playwright's browser state
+  (`.playwright-mcp/`) holds session cookies and stays gitignored.
 
 ## 4. Prove it repeats
 

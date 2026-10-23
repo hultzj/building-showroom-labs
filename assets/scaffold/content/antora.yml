@@ -10,6 +10,8 @@ asciidoc:
     page-pagination: true
     # A missing {attribute} becomes a warning, and the build fails on warnings.
     attribute-missing: warn
+    # GA, TP (Technology Preview) or DP (Developer Preview) for the feature the lab teaches.
+    feature_maturity: 'GA'
     # Showroom overrides these from user_data at deploy time; defaults are for local preview.
     guid: '%GUID%'
     cluster_domain: 'apps.cluster.example.com'

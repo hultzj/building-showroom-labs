@@ -44,8 +44,20 @@ showroom_answers() {
   curl -fsk --max-time 10 -o /dev/null "https://$host"
 }
 
+# The Showroom console tab is an iframe; a console that sends X-Frame-Options (DENY by default)
+# renders as a blank tab. RHDP orders embed the console; elsewhere, drop the tab or get the owner's OK.
+console_frameable() {
+  local url headers
+  url=$(oc whoami --show-console) || return 1
+  headers=$(curl -skI --max-time 10 "$url") || return 1
+  ! grep -qi '^x-frame-options:' <<<"$headers"
+}
+
 check "lab Applications are Synced/Healthy" apps_synced_healthy
 check "Showroom route answers" showroom_answers
+if grep -q 'console-openshift-console' "$(dirname "$0")/../ui-config.yml" 2>/dev/null; then
+  check "Showroom console tab can embed the console (no X-Frame-Options)" console_frameable
+fi
 # CHANGE-ME: one check per prerequisite the exercises assume, e.g.
 # check "demo workload ready" oc -n "$LAB_NS" rollout status deploy/<name> --timeout=10s
 # check "terminal can <verb> <resource>" oc auth can-i <verb> <resource> -n "$LAB_NS" --as "$TERMINAL_SA"

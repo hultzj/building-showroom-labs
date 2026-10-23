@@ -26,6 +26,8 @@
 
 * CHANGE-ME
 
-== Further reading
+== Sources and further reading
 
+// The product doc sections each module follows (see page-set.md, Grounding).
+* Module 1: link:https://docs.redhat.com/CHANGE-ME[CHANGE-ME doc section^]
 * link:https://CHANGE-ME[CHANGE-ME^]

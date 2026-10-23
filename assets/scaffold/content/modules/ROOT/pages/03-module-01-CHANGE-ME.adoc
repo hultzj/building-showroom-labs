@@ -27,6 +27,16 @@ CHANGE-ME
 // What state changes, and why.
 CHANGE-ME
 
+// When a step applies a manifest: show its key fields with callouts (five at most), then apply it below.
+[source,yaml,subs="attributes+"]
+----
+metadata:
+  name: CHANGE-ME                  # <1>
+  namespace: {lab_namespace}       # <2>
+----
+<1> *Name* — CHANGE-ME one sentence on why this field matters.
+<2> *Namespace* — your lab namespace; every command in this module targets it.
+
 [source,bash,role="execute",subs="attributes+"]
 ----
 oc -n {lab_namespace} get pods
