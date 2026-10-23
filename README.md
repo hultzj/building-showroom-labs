@@ -87,8 +87,9 @@ branch out, and run `make -C automation bootstrap`. It deploys that revision.
   - **Permissions:** you must be logged in with cluster-admin or equivalent
     rights. `bootstrap` creates and labels namespaces, and `verify`
     impersonates participants.
-  - **Repository:** Argo CD must be able to reach the lab repository (usually
-    a GitHub repository).
+  - **Repository:** the lab repository must be **public** (usually on
+    GitHub). Argo CD and Showroom's content builder both clone it without
+    credentials.
 - **For GUI steps:** the Playwright plugin for Claude Code.
 - **For the skill's own tests:** Ruby (to parse YAML) and Python 3.
 
