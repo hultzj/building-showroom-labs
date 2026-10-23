@@ -88,7 +88,7 @@ The skill then works through these steps, asking you for anything it needs:
 | `make -C automation help` | Lists the targets below |
 | `make -C automation bootstrap` | Deploys the lab through OpenShift GitOps on a cluster without an RHDP order. Requires the pushed revision with no local changes; refuses to take over a namespace that is not this lab's |
 | `make -C automation status` | Shows sync and health of the lab's Argo CD Applications |
-| `make -C automation verify` | Facilitator readiness check: one PASS/FAIL line per prerequisite, checked as the participant |
+| `make -C automation verify` | Facilitator readiness check: one PASS/FAIL line per prerequisite, checked as the participant, including whether each Showroom tab (such as the OpenShift console) can be shown in its frame |
 | `make -C automation teardown` | Deletes the lab's Applications and everything they created |
 
 On an RHDP order, skip `bootstrap`: order the Field Content CI with the lab's
@@ -131,8 +131,8 @@ On an RHDP order, give the branch in the order instead.
 ## Testing the skill
 
 ```bash
-bash tests/test-check-lab.sh            # check-lab.sh contract (25 cases)
-bash tests/test-scaffold-automation.sh  # chart, Makefile, verify.sh (56 cases)
+bash tests/test-check-lab.sh            # check-lab.sh contract (32 cases)
+bash tests/test-scaffold-automation.sh  # chart, Makefile, verify.sh (73 cases)
 ```
 
 ## Security notes

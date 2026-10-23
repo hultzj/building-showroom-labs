@@ -112,6 +112,7 @@ if [[ -n ${FAKE_REDIRECT:-} ]]; then  # like curl: the final response only follo
 fi
 printf 'HTTP/1.1 %s\r\n' "${FAKE_STATUS:-200 OK}"
 [[ -n ${FAKE_XFO:-} ]] && printf 'x-frame-options: %s\r\n' "$FAKE_XFO"
+[[ -n ${FAKE_BAD_HOST:-} && "$*" == *"$FAKE_BAD_HOST"* ]] && printf 'x-frame-options: DENY\r\n'
 [[ -n ${FAKE_CSP:-} ]] && printf 'content-security-policy: %s\r\n' "$FAKE_CSP"
 printf 'content-security-policy-report-only: frame-ancestors '"'"'none'"'"'\r\n'
 exit 0
@@ -126,6 +127,7 @@ cverify FAKE_STATUS='503 Service Unavailable' && bad "a tab target answering 503
 cverify FAKE_REDIRECT=1 FAKE_XFO=DENY && bad "a redirect to a page refusing framing fails" || ok "a redirect to a page refusing framing fails"
 cverify FAKE_REDIRECT=1 FAKE_XFO_FIRST=DENY && ok "only the final response after redirects is judged" || bad "only the final response after redirects is judged"
 cverify FAKE_CSP="frame-ancestors https://*.other.example" && bad "a scoped wildcard in frame-ancestors still refuses framing" || ok "a scoped wildcard in frame-ancestors still refuses framing"
+cverify FAKE_CSP="frame-ancestors 'none', frame-ancestors *" && bad "a permissive policy does not mask a blocking one" || ok "a permissive policy does not mask a blocking one"
 cverify FAKE_CSP="FRAME-ANCESTORS *" && ok "CSP directive names are case-insensitive" || bad "CSP directive names are case-insensitive"
 cverify && grep -q 'PASS: Showroom tab' "$fake/verify.out" && ok "a frameable tab target passes (report-only CSP ignored)" || bad "a frameable tab target passes (report-only CSP ignored)"
 grep -q 'https://console-openshift-console.apps.example.com' "$FAKE_CURL_LOG" && ok "\${DOMAIN} in tab URLs is filled in from the cluster" || bad "\${DOMAIN} in tab URLs is filled in from the cluster"
@@ -133,6 +135,10 @@ sed -i.bak "s|url: 'https://console-openshift-console.\${DOMAIN}'|url: 'https://
 cverify FAKE_XFO=DENY || true; tabfail && ok "a tab on a custom hostname is still checked" || bad "a tab on a custom hostname is still checked"
 printf '  - url: https://dashboard.example.org\n    name: Dashboard\n' >> "$lab/ui-config.yml"
 cverify || true; grep -q 'dashboard.example.org' "$FAKE_CURL_LOG" && ok "a tab written url-first is still checked" || bad "a tab written url-first is still checked"
+cverify FAKE_BAD_HOST=dashboard.example.org && bad "a later tab that refuses framing fails the run" || ok "a later tab that refuses framing fails the run"
+mv "$lab/ui-config.yml" "$lab/ui-config.yml.away"
+cverify && bad "a missing ui-config.yml fails instead of skipping the tab checks" || { grep -q 'FAIL: ui-config.yml' "$fake/verify.out" && ok "a missing ui-config.yml fails instead of skipping the tab checks" || bad "a missing ui-config.yml fails instead of skipping the tab checks"; }
+mv "$lab/ui-config.yml.away" "$lab/ui-config.yml"
 sed -i.bak '/OpenShift Console/,+1d; /dashboard.example.org/,+1d' "$lab/ui-config.yml"
 cverify FAKE_XFO=DENY || true; grep -q 'Showroom tab' "$fake/verify.out" && bad "no tab check when ui-config has no url tabs" || ok "no tab check when ui-config has no url tabs"
 rm -rf "$lab"

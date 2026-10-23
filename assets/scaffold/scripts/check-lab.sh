@@ -118,10 +118,21 @@ else
   fi
 fi
 
-# Screenshots are live-captured evidence; each needs alt text for screen readers.
-if grep -nE '^image::[^[]+\[ *("[[:space:]]*"|'"'[[:space:]]*'"')? *(,[^]]*)?\]|^image::[^[]+\[([^]]*,)? *alt *= *("[[:space:]]*"|'"'[[:space:]]*'"')? *(,[^]]*)?\]' "$pages"/*.adoc >&2; then
-  fail "image without alt text: image::file.png[What the screenshot shows]"
-fi
+# Screenshots are live-captured evidence; each needs alt text for screen readers: the first
+# positional attribute, or alt=, and not blank.
+for page in "$pages"/*.adoc; do
+  awk -v f="$page" '
+    /^image::[^[]+\[/ {
+      inner = $0; sub(/^image::[^[]*\[/, "", inner); sub(/\][^]]*$/, "", inner)
+      n = split(inner, a, ","); first = a[1]; gsub(/^[ \t]+|[ \t]+$/, "", first)
+      alt = (first ~ /=/) ? "" : first
+      for (i = 1; i <= n; i++) { it = a[i]; sub(/^[ \t]+/, "", it); if (it ~ /^alt[ \t]*=/) { sub(/^alt[ \t]*=/, "", it); alt = it } }
+      gsub(/["\047[:space:]]/, "", alt)
+      if (alt == "") { print f ":" FNR ": image without alt text: image::file.png[What the screenshot shows]"; bad = 1 }
+    }
+    END { exit bad }
+  ' "$page" >&2 || failed=1
+done
 
 # The field-content Showroom builder (quay.io/rhpds/antora) has no mermaid extension.
 if grep -n '^\[mermaid' "$pages"/*.adoc >&2; then
