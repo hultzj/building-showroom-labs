@@ -147,7 +147,7 @@ for pat in '.env*' '*kubeconfig*'; do
   grep -qxF "$pat" "$SCAFFOLD/.gitignore" && ok "credentials files ($pat) are gitignored" || bad "credentials files ($pat) are gitignored"
 done
 # A moved tag could run someone else's code in the deploy job, which can publish the lab's site.
-unpinned=$(grep -E '^[[:space:]]*(- )?uses:' "$SCAFFOLD/.github/workflows/gh-pages.yml" | grep -vE '@[0-9a-f]{40}([[:space:]]|$)' || true)
+unpinned=$(grep -E '^[[:space:]]*(- )?uses:' "$SCAFFOLD/.github/workflows/gh-pages.yml" | grep -vE 'uses:[[:space:]]*[^[:space:]@]+@[0-9a-f]{40}([[:space:]]|$)' || true)
 [[ -z $unpinned ]] && ok "every GitHub Action is pinned to a commit SHA" || bad "every GitHub Action is pinned to a commit SHA: $unpinned"
 grep -q 'feature_maturity:' "$SCAFFOLD/content/antora.yml" && grep -q 'ifeval::\["{feature_maturity}" == "TP"\]' "$SCAFFOLD/content/modules/ROOT/pages/index.adoc" \
   && grep -q 'ifeval::\["{feature_maturity}" == "DP"\]' "$SCAFFOLD/content/modules/ROOT/pages/index.adoc" && grep -q 'Developer Preview' "$SCAFFOLD/content/modules/ROOT/pages/index.adoc" \
