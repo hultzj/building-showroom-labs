@@ -93,8 +93,12 @@ Argo CD tracking annotation and are never pruned.
   bootstrap` reads them from environment variables and creates the Secret
   before applying the parent Application.
 - Image digests apply to images the lab owns. The upstream Showroom chart's
-  images are pinned by its commit SHA, its terminal by `showroom.terminalImage`,
+  commit pins its image *tags* (`antora`, `git-cloner`, `nginx`), and tags can
+  move; the chart does not expose them as values, so only a fork could pin
+  their digests. The terminal is pinned by digest (`showroom.terminalImage`),
   and operator-shipped images by the operator version.
+- GitHub Actions in the scaffold's workflow are pinned to commit SHAs (the
+  version is in a comment). Update them by SHA, never back to a tag.
 - `verify.sh` uses a `check "<name>" <command>` helper that prints PASS or
   FAIL per lab prerequisite and exits non-zero if any fail. The facilitator
   runs it before class as cluster-admin, so permission checks and probes

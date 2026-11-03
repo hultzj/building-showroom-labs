@@ -4,4 +4,7 @@ www/
 evidence/
 # Playwright browser state from the live pass holds session cookies.
 .playwright-mcp/
+# Credentials: secrets reach make bootstrap through environment variables, never git.
+.env*
+*kubeconfig*
 .xreview/

@@ -143,6 +143,12 @@ sed -i.bak '/OpenShift Console/,+1d; /dashboard.example.org/,+1d' "$lab/ui-confi
 cverify FAKE_XFO=DENY || true; grep -q 'Showroom tab' "$fake/verify.out" && bad "no tab check when ui-config has no url tabs" || ok "no tab check when ui-config has no url tabs"
 rm -rf "$lab"
 grep -qx '.playwright-mcp/' "$SCAFFOLD/.gitignore" && ok "Playwright auth state is gitignored" || bad "Playwright auth state is gitignored"
+for pat in '.env*' '*kubeconfig*'; do
+  grep -qxF "$pat" "$SCAFFOLD/.gitignore" && ok "credentials files ($pat) are gitignored" || bad "credentials files ($pat) are gitignored"
+done
+# A moved tag could run someone else's code in the deploy job, which can publish the lab's site.
+unpinned=$(grep -E '^[[:space:]]*(- )?uses:' "$SCAFFOLD/.github/workflows/gh-pages.yml" | grep -vE '@[0-9a-f]{40}([[:space:]]|$)' || true)
+[[ -z $unpinned ]] && ok "every GitHub Action is pinned to a commit SHA" || bad "every GitHub Action is pinned to a commit SHA: $unpinned"
 grep -q 'feature_maturity:' "$SCAFFOLD/content/antora.yml" && grep -q 'ifeval::\["{feature_maturity}" == "TP"\]' "$SCAFFOLD/content/modules/ROOT/pages/index.adoc" \
   && grep -q 'ifeval::\["{feature_maturity}" == "DP"\]' "$SCAFFOLD/content/modules/ROOT/pages/index.adoc" && grep -q 'Developer Preview' "$SCAFFOLD/content/modules/ROOT/pages/index.adoc" \
   && ok "scaffold carries feature_maturity and its TP/DP banners" || bad "scaffold carries feature_maturity and its TP/DP banners"
