@@ -1,0 +1,3 @@
+[submodule "upstream/field-sourced-content-template"]
+	path = upstream/field-sourced-content-template
+	url = https://github.com/rhpds/field-sourced-content-template.git

@@ -92,6 +92,8 @@ A step that only works the second time is not idempotent; fix it.
 ## 5. Finish
 
 - `bash scripts/check-lab.sh` (strict) and `npm run build` pass.
+- Offer the user the community-catalog PR: `catalog-stub.yaml` to the
+  field-content template's `catalog/untested/` (`field-content.md`).
 - Push the verified guide. Leave the test cluster as you found it: tear the
   lab down promptly (the Showroom terminal is open to anyone with its URL),
   and tell the owner what test-cluster setup from step 1 remains.

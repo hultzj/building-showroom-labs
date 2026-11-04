@@ -1,0 +1,16 @@
+# Community catalog stub, in the schema of rhpds/field-sourced-content-template catalog/ (see
+# references/field-content.md). After the live pass, submit it as a PR to that repo's
+# catalog/untested/; promotion to catalog/tested/ follows once someone has synced it.
+name: CHANGE-ME-lab              # Argo Application name: DNS-1123, lowercase, max 63 characters
+displayName: CHANGE-ME
+description: >-
+  CHANGE-ME: one or two sentences on what someone gets when they sync it.
+owner: CHANGE-ME                 # who to ping when the chart breaks (not RHDP platform)
+repoURL: https://github.com/CHANGE-ME/CHANGE-ME.git
+revision: main
+chartPath: automation/argocd
+requires:
+  virt: false
+  rhoai: false
+  aap: false
+  clusterSize: sno               # sno | multinode

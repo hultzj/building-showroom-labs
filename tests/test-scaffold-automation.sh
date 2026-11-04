@@ -153,6 +153,15 @@ grep -q 'feature_maturity:' "$SCAFFOLD/content/antora.yml" && grep -q 'ifeval::\
   && grep -q 'ifeval::\["{feature_maturity}" == "DP"\]' "$SCAFFOLD/content/modules/ROOT/pages/index.adoc" && grep -q 'Developer Preview' "$SCAFFOLD/content/modules/ROOT/pages/index.adoc" \
   && ok "scaffold carries feature_maturity and its TP/DP banners" || bad "scaffold carries feature_maturity and its TP/DP banners"
 
+# RHDP health monitoring watches resources labeled demo.redhat.com/application with the demo's name.
+helm template t "$SCAFFOLD/automation/argocd/components/lab-prereqs" --set lab.namespace=ns1 --set partOf=my-lab |
+  grep -q 'demo.redhat.com/application: my-lab' && ok "lab namespace carries the RHDP health label with the lab's name" || bad "lab namespace carries the RHDP health label with the lab's name"
+# The vendored field-content template and the Showroom child pin the same upstream commit.
+SKILL_DIR="$(cd "$SCAFFOLD/../.." && pwd)"
+sub=$(git -C "$SKILL_DIR/upstream/field-sourced-content-template" rev-parse HEAD 2>/dev/null || true)
+pin=$(awk '$1 == "revision:" && length($2) == 40 {print $2; exit}' "$SCAFFOLD/automation/argocd/values.yaml")
+[[ -n $sub && $sub == "$pin" ]] && ok "upstream template submodule matches showroom.chart.revision" || bad "upstream template submodule matches showroom.chart.revision (submodule '$sub', chart '$pin')"
+
 # Every image the Showroom child runs is pinned by digest, not a moving tag.
 grep -q 'image: .*@sha256:' <<<"$apps" && ok "Showroom terminal image is digest-pinned" || bad "Showroom terminal image is digest-pinned"
 

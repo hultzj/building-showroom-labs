@@ -72,6 +72,20 @@ else
   fail "automation/argocd does not render"
 fi
 
+# The community catalog stub (field-sourced-content-template schema) must be complete and point at a chart.
+if [[ -f catalog-stub.yaml ]]; then
+  for key in name repoURL revision chartPath; do
+    grep -qE "^$key:[[:space:]]*[^[:space:]#]" catalog-stub.yaml || fail "catalog-stub.yaml is missing $key"
+  done
+  stub_name=$(awk '$1 == "name:" {print $2; exit}' catalog-stub.yaml)
+  [[ $stub_name =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ && ${#stub_name} -le 63 ]] ||
+    fail "catalog-stub.yaml name '$stub_name' is not DNS-1123 (lowercase, digits, hyphens, max 63)"
+  stub_path=$(awk '$1 == "chartPath:" {gsub(/"/, "", $2); print $2; exit}' catalog-stub.yaml)
+  [[ -z $stub_path || -f "$stub_path/Chart.yaml" ]] || fail "catalog-stub.yaml chartPath '$stub_path' has no Chart.yaml"
+else
+  fail "catalog-stub.yaml is missing (community catalog stub)"
+fi
+
 # Every exercise, GUI-only ones included, states an Expected result.
 for page in "$pages"/*.adoc; do
   awk -v f="$page" '

@@ -75,5 +75,6 @@ fi
 # CHANGE-ME: one check per prerequisite the exercises assume, e.g.
 # check "demo workload ready" oc -n "$LAB_NS" rollout status deploy/<name> --timeout=10s
 # check "terminal can <verb> <resource>" oc auth can-i <verb> <resource> -n "$LAB_NS" --as "$TERMINAL_SA"
+# check "ansible Job completed" oc -n <runner-ns> wait --for=condition=Complete job/<name> --timeout=10s
 
 exit "$failed"

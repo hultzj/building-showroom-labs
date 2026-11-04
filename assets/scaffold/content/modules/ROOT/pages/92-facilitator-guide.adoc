@@ -21,6 +21,14 @@ make -C automation status
 
 Repeat `status` until every Application shows `Synced` and `Healthy`.
 
+== List the lab in the RHDP community catalog
+
+Once the lab is verified, open a pull request that adds `catalog-stub.yaml` as
+`catalog/untested/<name>.yaml` in
+link:https://github.com/rhpds/field-sourced-content-template[rhpds/field-sourced-content-template^].
+Moving it to `catalog/tested/` is a separate pull request, after someone syncs
+it on a Field Content cluster.
+
 == Verify every cluster
 
 [source,bash]

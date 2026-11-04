@@ -15,7 +15,7 @@ A lab is three things that must agree: the **guide** (Antora pages Showroom rend
 2. **Scaffold.** In a new git repo (Antora reads content only from git): `cp -R <this skill>/assets/scaffold/. .`, then `npm install`.
 3. **Plan.** Fill `PLAN.md`. If the lab's question names a path (egress, an API, another tenant), the plan exercises that path. Get the user's OK.
 4. **Write pages.** Follow `references/page-set.md`. Every exercise and every `role="execute"` block gets `Expected result:` plus `// UNVERIFIED` until you have seen the result live.
-5. **Automation and GitOps.** Follow `references/automation-gitops.md`.
+5. **Automation and GitOps.** Follow `references/automation-gitops.md`, built to the RHDP field-content template's contract (`references/field-content.md`; Helm, or Ansible-via-Helm when the stack needs it). Fill `catalog-stub.yaml`.
 6. **Local checks.** `npm run build`, then `bash scripts/check-lab.sh --draft`.
 7. **Review before deploy.** Run the reviews the user's instructions require (e.g. xreview, ponytail-review). If the RHDP marketplace's `showroom:verify-content` skill is installed, run it too for Red Hat style and accessibility.
 8. **Deploy and verify live.** Follow `references/verification.md`. Done when strict `bash scripts/check-lab.sh` passes and a clean re-run succeeds.
@@ -44,6 +44,7 @@ A lab is three things that must agree: the **guide** (Antora pages Showroom rend
 
 ## Files
 
+- `references/field-content.md`: the vendored RHDP field-content template (`upstream/`), its contract, the Ansible-via-Helm pattern, the community catalog stub
 - `references/environments.md`: RHDP vs pre-existing cluster, participant-built stacks and operators, shared tenancy, participant identity
 - `references/page-set.md`: page sections, the module template, GUI steps, AsciiDoc idioms
 - `references/automation-gitops.md`: chart layout, terminal identity, Makefile, `verify.sh`

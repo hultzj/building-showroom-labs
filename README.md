@@ -21,14 +21,18 @@ participant-built stacks, and dedicated (the default) or shared clusters.
 The repository is private; you need read access to it.
 
 ```bash
-git clone https://github.com/hultzj/building-showroom-labs.git \
+git clone --recurse-submodules https://github.com/hultzj/building-showroom-labs.git \
   ~/.claude/skills/building-showroom-labs
 ```
+
+`--recurse-submodules` also fetches the RHDP field-content template the skill
+builds to (`upstream/field-sourced-content-template`, pinned). If you cloned
+without it, run `git -C ~/.claude/skills/building-showroom-labs submodule update --init`.
 
 Start a new Claude Code session; the skill loads automatically. To update:
 
 ```bash
-git -C ~/.claude/skills/building-showroom-labs pull
+git -C ~/.claude/skills/building-showroom-labs pull --recurse-submodules
 ```
 
 ## Use
@@ -121,6 +125,8 @@ On an RHDP order, give the branch in the order instead.
 | Path | Contents |
 |---|---|
 | `SKILL.md` | The workflow and rules Claude follows |
+| `references/field-content.md` | The RHDP field-content template's contract, the Ansible-via-Helm pattern, the community catalog stub |
+| `upstream/field-sourced-content-template/` | The template itself, as a pinned git submodule |
 | `references/environments.md` | RHDP vs pre-existing clusters, participant-built stacks and operators, shared tenancy, participant identity |
 | `references/page-set.md` | Every guide page's sections, the module template, GUI steps, AsciiDoc pitfalls |
 | `references/automation-gitops.md` | Chart layout, the Showroom terminal's identity, Makefile and `verify.sh` |
@@ -131,8 +137,8 @@ On an RHDP order, give the branch in the order instead.
 ## Testing the skill
 
 ```bash
-bash tests/test-check-lab.sh            # check-lab.sh contract (32 cases)
-bash tests/test-scaffold-automation.sh  # chart, Makefile, verify.sh (76 cases)
+bash tests/test-check-lab.sh            # check-lab.sh contract (34 cases)
+bash tests/test-scaffold-automation.sh  # chart, Makefile, verify.sh (78 cases)
 ```
 
 ## Security notes
@@ -152,6 +158,7 @@ bash tests/test-scaffold-automation.sh  # chart, Makefile, verify.sh (76 cases)
 
 The guide structure follows
 [taylorjordanNC/rhai-agent-security](https://github.com/taylorjordanNC/rhai-agent-security).
-The chart layout and Showroom component come from
+The chart layout, Showroom component and catalog schema come from
 [rhpds/field-sourced-content-template](https://github.com/rhpds/field-sourced-content-template)
+(vendored as a submodule)
 and [rhpds/rhdp-gitops-patterns](https://github.com/rhpds/rhdp-gitops-patterns).

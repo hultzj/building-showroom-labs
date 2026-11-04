@@ -138,6 +138,14 @@ printf '\nimage::01-console.png[The Projects page listing your project]\n' >> "$
 expect pass "image with alt text" --draft
 
 fresh
+sed -i.bak '/^chartPath:/d' "$work/lab/catalog-stub.yaml" && rm "$work/lab/catalog-stub.yaml.bak"
+expect fail "catalog stub without chartPath" --draft
+
+fresh
+sed -i.bak 's/^name: .*/name: Not_A_DNS_Name/' "$work/lab/catalog-stub.yaml" && rm "$work/lab/catalog-stub.yaml.bak"
+expect fail "catalog stub name that is not DNS-1123" --draft
+
+fresh
 sed -i.bak '/^== Evidence checkpoint$/d' "$page" && rm "$page.bak"
 expect fail "module without Evidence checkpoint" --draft
 
