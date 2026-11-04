@@ -44,25 +44,86 @@ This page lists what the skill relies on and where it deliberately differs.
 Copy `upstream/field-sourced-content-template/examples/ansible` into
 `automation/argocd/components/<name>/` as one more child chart, with its own
 Application in `templates/applications.yaml`. That keeps the parent/child
-layout. Then harden it before the first push:
+layout. The example is a demonstration, not a production chart. Work through
+this list before the first push.
 
-- **Showroom.** Drop the example's `deploy-showroom` role. Showroom stays the
-  `showroom` child.
-- **Runner image.** Pin it by digest. Never use the example's `:latest` tag.
-- **Python packages.** Pin every one with `==` in `ansible.requirements`. The
-  example's collections are already pinned.
-- **Helm binary.** Pin the version and check its SHA-256, or bake Helm into
-  the image. Never use a bare `curl | tar`.
-- **RBAC.** Grant only what the playbooks touch, using namespaced Roles where
-  you can. The example's ClusterRole allows `bind` and `escalate` on cluster
-  roles and access to every Secret. That is close to cluster-admin for any pod
-  running as that ServiceAccount.
-- **Idempotency.** The Job is an Argo CD `Sync` hook with
-  `BeforeHookCreation`, so every sync re-runs the playbook. Tasks must be safe
-  to re-run: `state: present`, and retry-until loops instead of sleeps.
+**Remove**
+
+- The `deploy-showroom` role. Showroom stays the `showroom` child.
+- The Helm download: only that role used Helm.
+- The preflight task that creates a random Namespace. It needs cluster-wide
+  rights and fails once RBAC is narrowed.
+- The example's other roles and `requirements.yml` unless you use them. Its
+  collections there are ranges, not pins.
+- The scaffold's `lab-prereqs/templates/userinfo.yaml`, if the playbook writes
+  userinfo. Otherwise Argo CD's selfHeal reverts the playbook's values.
+
+**Rewire**
+
+- **Playbook source.** Point `ansible.repository.url`, `branch` and `path` at
+  the lab's own repo (the parent's `gitops.repoUrl`, `gitops.revision` and
+  `basePath`). Otherwise the Job runs upstream's demo playbook. It clones the
+  branch tip, so the revision should be the branch Argo CD syncs.
+- **Showroom URL.** `site.yml` uses `showroom_url`, which only the dropped
+  role set. Compute it the scaffold's way (`https://showroom-<namespace>.<domain>`),
+  or look up the `showroom` Route with `kubernetes.core.k8s_info` (which needs
+  `get` on Routes there).
+- **Namespace ownership.** In `templates/namespace.yaml`:
+  - add `app.kubernetes.io/part-of: {{ .Values.partOf }}` and
+    `argocd.argoproj.io/managed-by: {{ .Values.argocdNamespace }}`;
+  - set `demo.redhat.com/application` to `{{ .Values.partOf }}`, and do the
+    same in `_helpers.tpl`'s labels;
+  - add `partOf` and `argocdNamespace` to `values.yaml`, and have the parent's
+    Application pass them, as it does for `lab-prereqs`.
+
+  Without this, `check-lab.sh` and `make bootstrap`'s ownership guard reject
+  the namespace.
+- **Template details.** Name the Job from `job.name`; the example builds
+  `<release>-<chart>` and ignores it. Make `deployer.domain` `required`; the
+  example's fallback domain silently produces wrong URLs.
+
+**Harden**
+
+- **Runner image.** Use a public, digest-pinned image, for example
+  `registry.access.redhat.com/ubi9/python-312@sha256:…`. The example's
+  `registry.redhat.io` image needs a pull secret and ships Python 3.9.
+  Confirm in the live pass that the image has `git`.
+- **Versions.** Pick a supported `ansible-core` and a matching
+  `kubernetes.core`, and pin both. The example's pins target ansible-core
+  2.15, which is end-of-life and does not run on Python 3.12.
+- **Python packages.** Pin direct packages with `==`. Resolve the full set
+  (`pip freeze`) inside the runner image, not on your workstation, so the
+  wheels match its Python and platform.
+- **RBAC.** Grant only what the playbook touches: namespaced Roles, with
+  `resourceNames` wherever the verb allows it. `create` cannot be limited by
+  name. The example's ClusterRole allows `bind` and `escalate` on cluster
+  roles and access to every Secret, close to cluster-admin for any pod running
+  as that ServiceAccount.
+- **Secrets stay out of logs.** Put `no_log: true` on every task that reads or
+  writes a secret value; the Job's log is evidence. ansible-core still prints
+  the error text of a failed `no_log` task, so keep values out of `fail`
+  messages. Put credentials in userinfo only when the order owner is meant to
+  see them.
+
+**Behave**
+
+- **Idempotent, without rotating secrets.** The Job is an Argo CD `Sync`
+  hook with `BeforeHookCreation`, so every sync re-runs the playbook. Use
+  `state: present` and retry-until loops. A generated secret must be
+  get-then-create-if-absent: `state: present` with a fresh random value
+  rotates it under running pods.
+- **Job retention.** Set `job.ttlSecondsAfterFinished: 0`; the template then
+  omits the TTL. The example's 600 seconds deletes the Job and its logs ten
+  minutes after it finishes. `BeforeHookCreation` still replaces it on the
+  next sync.
+- **Ordering.** Do not sync-wave a child after another child whose health
+  depends on it. If a Deployment needs the Job's Secret, it cannot go Healthy
+  first, so waiting for it deadlocks. Leave both unwaved and rely on the
+  children's retry. A Role or RoleBinding that lands in a namespace another
+  child creates is covered by the same retry.
 - **Readiness.** `verify.sh` checks that the Job is `Complete` and that its
-  userinfo ConfigMap exists. In the live pass, `oc logs job/<name>` is
-  evidence.
+  userinfo ConfigMap holds the expected keys. In the live pass,
+  `oc logs job/<name>` is evidence.
 
 ## The community catalog
 

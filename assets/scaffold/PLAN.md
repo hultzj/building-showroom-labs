@@ -11,6 +11,7 @@ Working document. Not rendered by Antora.
 - Tenancy (dedicated cluster per participant by default; shared with per-user namespaces only if asked): CHANGE-ME
 - Participant identity (Showroom terminal ServiceAccount, or their own user with the terminal off): CHANGE-ME
 - Test cluster and git repo URL: CHANGE-ME
+- Catalog stub owner (who to ping when the chart breaks) and cluster size (sno or multinode): CHANGE-ME
 
 ## Lab map
 

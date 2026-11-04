@@ -153,6 +153,10 @@ grep -q 'feature_maturity:' "$SCAFFOLD/content/antora.yml" && grep -q 'ifeval::\
   && grep -q 'ifeval::\["{feature_maturity}" == "DP"\]' "$SCAFFOLD/content/modules/ROOT/pages/index.adoc" && grep -q 'Developer Preview' "$SCAFFOLD/content/modules/ROOT/pages/index.adoc" \
   && ok "scaffold carries feature_maturity and its TP/DP banners" || bad "scaffold carries feature_maturity and its TP/DP banners"
 
+# The pre-flight runs `oc get namespace <lab ns>` as the terminal: its Role must allow exactly that (verified live).
+role=$(helm template t "$SCAFFOLD/automation/argocd/components/lab-prereqs" --set lab.namespace=ns1 --set partOf=my-lab)
+grep -A3 'resources: \["namespaces"\]' <<<"$role" | grep -q 'resourceNames: \["ns1"\]' \
+  && ok "terminal Role can get its own lab namespace, by name only" || bad "terminal Role can get its own lab namespace, by name only"
 # RHDP health monitoring watches resources labeled demo.redhat.com/application with the demo's name.
 helm template t "$SCAFFOLD/automation/argocd/components/lab-prereqs" --set lab.namespace=ns1 --set partOf=my-lab |
   grep -q 'demo.redhat.com/application: my-lab' && ok "lab namespace carries the RHDP health label with the lab's name" || bad "lab namespace carries the RHDP health label with the lab's name"

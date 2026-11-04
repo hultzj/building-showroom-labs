@@ -106,6 +106,10 @@ rm -rf "$work/lab/automation/argocd"
 expect fail "missing parent chart" --draft
 
 fresh
+sed -i.bak 's|app.kubernetes.io/part-of: {{ .Values.partOf }}|app.kubernetes.io/part-of: {{ .Values.partOf \| quote }}|' "$work/lab/automation/argocd/components/lab-prereqs/templates/namespace.yaml"
+expect pass "a quoted part-of label value is accepted" --draft
+
+fresh
 sed -i.bak '/partOf: {{ .Release.Name | quote }}/d' "$work/lab/automation/argocd/templates/applications.yaml"
 expect fail "parent no longer passes the ownership label to the component" --draft
 
@@ -144,6 +148,22 @@ expect fail "catalog stub without chartPath" --draft
 fresh
 sed -i.bak 's/^name: .*/name: Not_A_DNS_Name/' "$work/lab/catalog-stub.yaml" && rm "$work/lab/catalog-stub.yaml.bak"
 expect fail "catalog stub name that is not DNS-1123" --draft
+
+fresh
+sed -i.bak 's/^repoURL: .*/repoURL: ""/' "$work/lab/catalog-stub.yaml" && rm "$work/lab/catalog-stub.yaml.bak"
+expect fail "catalog stub with an empty quoted repoURL" --draft
+
+fresh
+sed -i.bak 's/^chartPath: .*/chartPath: ""/' "$work/lab/catalog-stub.yaml" && rm "$work/lab/catalog-stub.yaml.bak"
+expect fail "catalog stub with an empty quoted chartPath" --draft
+
+fresh
+sed -i.bak 's/^chartPath: .*/chartPath: content/' "$work/lab/catalog-stub.yaml" && rm "$work/lab/catalog-stub.yaml.bak"
+expect fail "catalog stub chartPath without a Chart.yaml" --draft
+
+fresh
+sed -i.bak 's/^name: .*/name: "filled-lab"/' "$work/lab/catalog-stub.yaml" && rm "$work/lab/catalog-stub.yaml.bak"
+expect pass "catalog stub with a quoted valid name" --draft
 
 fresh
 sed -i.bak '/^== Evidence checkpoint$/d' "$page" && rm "$page.bak"

@@ -57,6 +57,10 @@ namespace:
 - read (`get`, `list`, `watch`) on what the exercises inspect;
 - write only on what they change;
 - `pods/exec` (`create`, `get`) when a step runs `oc exec`.
+- one Secret the participant must read: `get` with `resourceNames: [<name>]`,
+  and no `list` on Secrets;
+- the lab namespace itself (`get`, `resourceNames: [<lab ns>]`) for the
+  pre-flight's `oc get namespace`; the scaffold's Role already has this.
 
 Do not use `ClusterRole edit`: it lets a participant relabel pods or edit
 workloads and walk around the control the lab teaches. The pre-flight on

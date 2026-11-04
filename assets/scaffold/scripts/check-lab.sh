@@ -63,7 +63,7 @@ if rendered=$(helm template lab automation/argocd --set deployer.domain=apps.exa
     out=$(helm template lab "$path" -f "${pf%.path}.values" 2>&1) || { fail "$path does not render with the values its parent passes"; continue; }
     awk '/^---/ { if (ns && !own) bad = 1; ns = 0; own = 0 }
          /^kind: Namespace$/ { ns = 1 }
-         /app\.kubernetes\.io\/part-of: lab$/ { own = 1 }
+         /app\.kubernetes\.io\/part-of: ["\047]?lab["\047]?$/ { own = 1 }
          END { if (ns && !own) bad = 1; exit bad }' <<<"$out" ||
       fail "$path: a Namespace lacks app.kubernetes.io/part-of (the parent must pass partOf)"
   done
@@ -73,15 +73,18 @@ else
 fi
 
 # The community catalog stub (field-sourced-content-template schema) must be complete and point at a chart.
+stub_val() {  # value of a top-level key, without comment, quotes or surrounding space
+  awk -v k="$1:" '$1 == k {sub(/^[^:]*:[ \t]*/, ""); sub(/[ \t]+#.*$/, ""); gsub(/^["\047]|["\047]$/, ""); print; exit}' catalog-stub.yaml
+}
 if [[ -f catalog-stub.yaml ]]; then
   for key in name repoURL revision chartPath; do
-    grep -qE "^$key:[[:space:]]*[^[:space:]#]" catalog-stub.yaml || fail "catalog-stub.yaml is missing $key"
+    [[ -n $(stub_val "$key") ]] || fail "catalog-stub.yaml: $key is missing or empty"
   done
-  stub_name=$(awk '$1 == "name:" {print $2; exit}' catalog-stub.yaml)
+  stub_name=$(stub_val name)
   [[ $stub_name =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ && ${#stub_name} -le 63 ]] ||
     fail "catalog-stub.yaml name '$stub_name' is not DNS-1123 (lowercase, digits, hyphens, max 63)"
-  stub_path=$(awk '$1 == "chartPath:" {gsub(/"/, "", $2); print $2; exit}' catalog-stub.yaml)
-  [[ -z $stub_path || -f "$stub_path/Chart.yaml" ]] || fail "catalog-stub.yaml chartPath '$stub_path' has no Chart.yaml"
+  stub_path=$(stub_val chartPath)
+  [[ -n $stub_path && -f "$stub_path/Chart.yaml" ]] || fail "catalog-stub.yaml chartPath '$stub_path' has no Chart.yaml"
 else
   fail "catalog-stub.yaml is missing (community catalog stub)"
 fi
