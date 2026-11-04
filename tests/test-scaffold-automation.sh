@@ -155,7 +155,8 @@ grep -q 'feature_maturity:' "$SCAFFOLD/content/antora.yml" && grep -q 'ifeval::\
 
 # The pre-flight runs `oc get namespace <lab ns>` as the terminal: its Role must allow exactly that (verified live).
 role=$(helm template t "$SCAFFOLD/automation/argocd/components/lab-prereqs" --set lab.namespace=ns1 --set partOf=my-lab)
-grep -A3 'resources: \["namespaces"\]' <<<"$role" | grep -q 'resourceNames: \["ns1"\]' \
+ns_rule=$(grep -A2 'resources: \["namespaces"\]' <<<"$role")
+grep -q 'resourceNames: \["ns1"\]' <<<"$ns_rule" && grep -q 'verbs: \["get"\]' <<<"$ns_rule" \
   && ok "terminal Role can get its own lab namespace, by name only" || bad "terminal Role can get its own lab namespace, by name only"
 # RHDP health monitoring watches resources labeled demo.redhat.com/application with the demo's name.
 helm template t "$SCAFFOLD/automation/argocd/components/lab-prereqs" --set lab.namespace=ns1 --set partOf=my-lab |

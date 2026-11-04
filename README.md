@@ -137,8 +137,8 @@ On an RHDP order, give the branch in the order instead.
 ## Testing the skill
 
 ```bash
-bash tests/test-check-lab.sh            # check-lab.sh contract (34 cases)
-bash tests/test-scaffold-automation.sh  # chart, Makefile, verify.sh (78 cases)
+bash tests/test-check-lab.sh            # check-lab.sh contract (44 cases)
+bash tests/test-scaffold-automation.sh  # chart, Makefile, verify.sh (79 cases)
 ```
 
 ## Security notes

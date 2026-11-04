@@ -72,23 +72,30 @@ else
   fail "automation/argocd does not render"
 fi
 
-# The community catalog stub (field-sourced-content-template schema) must be complete and point at a chart.
-stub_val() {  # value of a top-level key without comment, quotes or surrounding space; YAML null is empty
-  awk -v k="$1:" '$1 == k {
-    v = $0; sub(/^[^:]*:[ \t]*/, "", v); if (v ~ /^#/) v = ""
-    sub(/[ \t]+#.*$/, "", v); sub(/[ \t]+$/, "", v); gsub(/^["\047]|["\047]$/, "", v)
-    if (v == "null" || v == "~") v = ""
-    print v; exit }' catalog-stub.yaml
-}
+# The community catalog stub (field-sourced-content-template schema) must be valid YAML, complete, and
+# point at a chart. Helm's fromYaml is a real YAML parser and helm is already required here.
 if [[ -f catalog-stub.yaml ]]; then
-  for key in name repoURL revision chartPath; do
-    [[ -n $(stub_val "$key") ]] || fail "catalog-stub.yaml: $key is missing or empty"
-  done
-  stub_name=$(stub_val name)
-  [[ $stub_name =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ && ${#stub_name} -le 63 ]] ||
-    fail "catalog-stub.yaml name '$stub_name' is not DNS-1123 (lowercase, digits, hyphens, max 63)"
-  stub_path=$(stub_val chartPath)
-  [[ -n $stub_path && -f "$stub_path/Chart.yaml" ]] || fail "catalog-stub.yaml chartPath '$stub_path' has no Chart.yaml"
+  stubchart="$tmp/stubcheck"; mkdir -p "$stubchart/templates"
+  printf 'apiVersion: v2\nname: stubcheck\nversion: 0.0.1\n' > "$stubchart/Chart.yaml"
+  cp catalog-stub.yaml "$stubchart/catalog-stub.yaml"
+  cat > "$stubchart/templates/out.yaml" <<'TPL'
+{{- $s := .Files.Get "catalog-stub.yaml" | fromYaml }}
+{{- if hasKey $s "Error" }}{{ fail (printf "catalog-stub.yaml is not valid YAML: %s" $s.Error) }}{{ end }}
+{{- range list "name" "repoURL" "revision" "chartPath" }}
+{{- $v := get $s . }}
+{{- if not (and (kindIs "string" $v) (ne (trim $v) "")) }}{{ fail (printf "catalog-stub.yaml: %s is missing, empty or not a string" .) }}{{ end }}
+{{- end }}
+# name={{ $s.name }}
+# chartPath={{ $s.chartPath }}
+TPL
+  if stub_out=$(helm template stub "$stubchart" 2>&1); then
+    stub_name=$(sed -n 's/^# name=//p' <<<"$stub_out"); stub_path=$(sed -n 's/^# chartPath=//p' <<<"$stub_out")
+    [[ $stub_name =~ ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$ && ${#stub_name} -le 63 ]] ||
+      fail "catalog-stub.yaml name '$stub_name' is not DNS-1123 (lowercase, digits, hyphens, max 63)"
+    [[ -f "$stub_path/Chart.yaml" ]] || fail "catalog-stub.yaml chartPath '$stub_path' has no Chart.yaml"
+  else
+    fail "$(grep -o 'catalog-stub.yaml[^"]*' <<<"$stub_out" | head -1)"
+  fi
 else
   fail "catalog-stub.yaml is missing (community catalog stub)"
 fi

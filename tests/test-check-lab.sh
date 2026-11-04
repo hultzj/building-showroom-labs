@@ -178,6 +178,14 @@ sed -i.bak 's/^name: .*/name: filled-lab   /; s/^chartPath: .*/chartPath: "autom
 expect pass "catalog stub values with trailing spaces" --draft
 
 fresh
+sed -i.bak 's/^name: .*/name: "filled-lab/' "$work/lab/catalog-stub.yaml" && rm "$work/lab/catalog-stub.yaml.bak"
+expect fail "catalog stub that is not valid YAML (unmatched quote)" --draft
+
+fresh
+sed -i.bak 's/^revision: .*/revision: "null"/' "$work/lab/catalog-stub.yaml" && rm "$work/lab/catalog-stub.yaml.bak"
+expect pass "catalog stub whose revision is the quoted string null" --draft
+
+fresh
 sed -i.bak '/^== Evidence checkpoint$/d' "$page" && rm "$page.bak"
 expect fail "module without Evidence checkpoint" --draft
 
