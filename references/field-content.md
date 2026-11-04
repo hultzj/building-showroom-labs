@@ -60,9 +60,10 @@ this list before the first push.
 
 **Rewire**
 
-- **Playbook source.** Point `ansible.repository.url`, `branch` and `path` at
-  the lab's own repo (the parent's `gitops.repoUrl`, `gitops.revision` and
-  `basePath`). Otherwise the Job runs upstream's demo playbook. It clones the
+- **Playbook source.** Point `ansible.repository.url` and `branch` at the
+  lab's own repo (the parent's `gitops.repoUrl` and `gitops.revision`), and
+  `path` at `<gitops.basePath>/components/<name>/playbooks`, where the copied
+  `site.yml` lives. Otherwise the Job runs upstream's demo playbook. It clones the
   branch tip, so the revision should be the branch Argo CD syncs.
 - **Showroom URL.** `site.yml` uses `showroom_url`, which only the dropped
   role set. Compute it the scaffold's way (`https://showroom-<namespace>.<domain>`),

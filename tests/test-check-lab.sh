@@ -166,6 +166,18 @@ sed -i.bak 's/^name: .*/name: "filled-lab"/' "$work/lab/catalog-stub.yaml" && rm
 expect pass "catalog stub with a quoted valid name" --draft
 
 fresh
+sed -i.bak 's/^repoURL: .*/repoURL: # TODO URL/' "$work/lab/catalog-stub.yaml" && rm "$work/lab/catalog-stub.yaml.bak"
+expect fail "catalog stub whose value is only a comment (YAML null)" --draft
+
+fresh
+sed -i.bak 's/^revision: .*/revision: null/' "$work/lab/catalog-stub.yaml" && rm "$work/lab/catalog-stub.yaml.bak"
+expect fail "catalog stub with a null revision" --draft
+
+fresh
+sed -i.bak 's/^name: .*/name: filled-lab   /; s/^chartPath: .*/chartPath: "automation\/argocd"   /' "$work/lab/catalog-stub.yaml" && rm "$work/lab/catalog-stub.yaml.bak"
+expect pass "catalog stub values with trailing spaces" --draft
+
+fresh
 sed -i.bak '/^== Evidence checkpoint$/d' "$page" && rm "$page.bak"
 expect fail "module without Evidence checkpoint" --draft
 

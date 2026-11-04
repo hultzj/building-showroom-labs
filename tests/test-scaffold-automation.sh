@@ -162,7 +162,8 @@ helm template t "$SCAFFOLD/automation/argocd/components/lab-prereqs" --set lab.n
   grep -q 'demo.redhat.com/application: my-lab' && ok "lab namespace carries the RHDP health label with the lab's name" || bad "lab namespace carries the RHDP health label with the lab's name"
 # The vendored field-content template and the Showroom child pin the same upstream commit.
 SKILL_DIR="$(cd "$SCAFFOLD/../.." && pwd)"
-sub=$(git -C "$SKILL_DIR/upstream/field-sourced-content-template" rev-parse HEAD 2>/dev/null || true)
+# The staged gitlink is what a recursive clone receives; the checkout alone can differ from it.
+sub=$(git -C "$SKILL_DIR" ls-files -s -- upstream/field-sourced-content-template | awk '$1 == "160000" {print $2}')
 pin=$(awk '$1 == "revision:" && length($2) == 40 {print $2; exit}' "$SCAFFOLD/automation/argocd/values.yaml")
 [[ -n $sub && $sub == "$pin" ]] && ok "upstream template submodule matches showroom.chart.revision" || bad "upstream template submodule matches showroom.chart.revision (submodule '$sub', chart '$pin')"
 

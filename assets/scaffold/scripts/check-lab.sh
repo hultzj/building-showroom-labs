@@ -73,8 +73,12 @@ else
 fi
 
 # The community catalog stub (field-sourced-content-template schema) must be complete and point at a chart.
-stub_val() {  # value of a top-level key, without comment, quotes or surrounding space
-  awk -v k="$1:" '$1 == k {sub(/^[^:]*:[ \t]*/, ""); sub(/[ \t]+#.*$/, ""); gsub(/^["\047]|["\047]$/, ""); print; exit}' catalog-stub.yaml
+stub_val() {  # value of a top-level key without comment, quotes or surrounding space; YAML null is empty
+  awk -v k="$1:" '$1 == k {
+    v = $0; sub(/^[^:]*:[ \t]*/, "", v); if (v ~ /^#/) v = ""
+    sub(/[ \t]+#.*$/, "", v); sub(/[ \t]+$/, "", v); gsub(/^["\047]|["\047]$/, "", v)
+    if (v == "null" || v == "~") v = ""
+    print v; exit }' catalog-stub.yaml
 }
 if [[ -f catalog-stub.yaml ]]; then
   for key in name repoURL revision chartPath; do
