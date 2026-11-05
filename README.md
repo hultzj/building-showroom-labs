@@ -1,4 +1,4 @@
-# building-showroom-labs
+# showroom-labs-builder
 
 A [Claude Code](https://claude.com/claude-code) skill for building Red Hat Demo
 Platform (RHDP) **Showroom labs that run on OpenShift**. It produces all three
@@ -21,23 +21,23 @@ participant-built stacks, and dedicated (the default) or shared clusters.
 The repository is private; you need read access to it.
 
 ```bash
-git clone --recurse-submodules https://github.com/hultzj/building-showroom-labs.git \
-  ~/.claude/skills/building-showroom-labs
+git clone --recurse-submodules https://github.com/hultzj/showroom-labs-builder.git \
+  ~/.claude/skills/showroom-labs-builder
 ```
 
 `--recurse-submodules` also fetches the RHDP field-content template the skill
 builds to (`upstream/field-sourced-content-template`, pinned). If you cloned
-without it, run `git -C ~/.claude/skills/building-showroom-labs submodule update --init`.
+without it, run `git -C ~/.claude/skills/showroom-labs-builder submodule update --init`.
 
 Start a new Claude Code session; the skill loads automatically. To update:
 
 ```bash
-git -C ~/.claude/skills/building-showroom-labs pull --recurse-submodules
+git -C ~/.claude/skills/showroom-labs-builder pull --recurse-submodules
 ```
 
 ## Use
 
-In Claude Code, either type `/building-showroom-labs` or describe the lab you
+In Claude Code, either type `/showroom-labs-builder` or describe the lab you
 want, for example:
 
 > Build a Showroom lab that teaches default-deny NetworkPolicy on OpenShift,
@@ -47,7 +47,7 @@ A complete prompt answers the skill's intake questions up front, so it can go
 straight to planning. Copy this one and change the details:
 
 ```text
-Use the building-showroom-labs skill to build a new Showroom lab.
+Use the showroom-labs-builder skill to build a new Showroom lab.
 
 Topic: Serving a model with OpenShift AI and controlling who can call it.
 Audience: application developers new to OpenShift AI.

@@ -1,5 +1,5 @@
 ---
-name: building-showroom-labs
+name: showroom-labs-builder
 description: Use when creating, extending, or verifying a Red Hat Demo Platform (RHDP) Showroom lab or workshop that runs on OpenShift — on an RHDP order or a pre-existing cluster, dedicated or shared — covering the Antora/AsciiDoc guide, the automation and the OpenShift GitOps chart, especially when guide steps need pass conditions proven on a live cluster.
 ---
 
