@@ -18,8 +18,6 @@ participant-built stacks, and dedicated (the default) or shared clusters.
 
 ## Install
 
-The repository is private; you need read access to it.
-
 ```bash
 git clone --recurse-submodules https://github.com/hultzj/showroom-labs-builder.git \
   ~/.claude/skills/showroom-labs-builder
