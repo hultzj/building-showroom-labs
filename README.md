@@ -136,7 +136,7 @@ On an RHDP order, give the branch in the order instead.
 
 ```bash
 bash tests/test-check-lab.sh            # check-lab.sh contract (44 cases)
-bash tests/test-scaffold-automation.sh  # chart, Makefile, verify.sh (79 cases)
+bash tests/test-scaffold-automation.sh  # chart, Makefile, verify.sh (92 cases)
 ```
 
 ## Security notes

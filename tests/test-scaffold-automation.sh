@@ -97,7 +97,7 @@ cat > "$fake/oc" <<'SH'
 case "$*" in
   *ingresses.config*) printf 'apps.example.com' ;;
   *applications.argoproj.io*) printf 'lab Synced/Healthy lab\nlab-showroom Synced/Healthy lab\n' ;;
-  *route*) printf 'showroom.example.test' ;;
+  *route*) printf '%s' "${FAKE_ROUTE_HOST:-showroom.example.test}" ;;
 esac
 SH
 cat > "$fake/curl" <<'SH'
@@ -126,7 +126,20 @@ cverify FAKE_CSP="default-src 'self'; frame-ancestors 'self'" && bad "an enforce
 cverify FAKE_STATUS='503 Service Unavailable' && bad "a tab target answering 503 fails" || ok "a tab target answering 503 fails"
 cverify FAKE_REDIRECT=1 FAKE_XFO=DENY && bad "a redirect to a page refusing framing fails" || ok "a redirect to a page refusing framing fails"
 cverify FAKE_REDIRECT=1 FAKE_XFO_FIRST=DENY && ok "only the final response after redirects is judged" || bad "only the final response after redirects is judged"
-cverify FAKE_CSP="frame-ancestors https://*.other.example" && bad "a scoped wildcard in frame-ancestors still refuses framing" || ok "a scoped wildcard in frame-ancestors still refuses framing"
+cverify FAKE_CSP="frame-ancestors https://*.other.example" && bad "a wildcard for another domain refuses framing" || ok "a wildcard for another domain refuses framing"
+cverify FAKE_CSP="frame-ancestors 'self' https://*.example.test" && ok "a wildcard covering the Showroom host allows framing (RHDP embedding model)" || bad "a wildcard covering the Showroom host allows framing (RHDP embedding model)"
+cverify FAKE_CSP="frame-ancestors 'self' https://showroom.example.test" && ok "the exact Showroom origin allows framing" || bad "the exact Showroom origin allows framing"
+cverify FAKE_CSP="frame-ancestors 'self' https://showroom.example.test.evil.org" && bad "a look-alike host does not count as the Showroom origin" || ok "a look-alike host does not count as the Showroom origin"
+cverify FAKE_CSP="frame-ancestors 'self'" && bad "'self' alone refuses a Showroom on another host" || ok "'self' alone refuses a Showroom on another host"
+cverify FAKE_CSP="frame-ancestors https://showroom.example.test:443" && ok "an explicit default port still admits the Showroom origin" || bad "an explicit default port still admits the Showroom origin"
+cverify FAKE_CSP="frame-ancestors https://*.example.test:*" && ok "a wildcard port still admits the Showroom origin" || bad "a wildcard port still admits the Showroom origin"
+cverify FAKE_CSP="frame-ancestors https://showroom.example.test:8443" && bad "another explicit port does not admit the Showroom origin" || ok "another explicit port does not admit the Showroom origin"
+cverify FAKE_CSP="frame-ancestors https://*.ample.test" && bad "a wildcard only matches at a dot boundary" || ok "a wildcard only matches at a dot boundary"
+cverify FAKE_CSP="frame-ancestors https://*.showroom.example.test" && bad "a wildcard does not match the bare host it is rooted at" || ok "a wildcard does not match the bare host it is rooted at"
+cverify FAKE_CSP="frame-ancestors https://*.example.test, frame-ancestors https://other.test" && bad "every policy must admit the origin, not just the first" || ok "every policy must admit the origin, not just the first"
+cverify FAKE_CSP="frame-ancestors https://showroom.example.test/allowed" && bad "a source with a path does not admit the Showroom origin" || ok "a source with a path does not admit the Showroom origin"
+cverify FAKE_ROUTE_HOST=guide.apps.other.test FAKE_CSP="frame-ancestors https://guide.apps.other.test" && ok "matching uses the host the Showroom Route reports" || bad "matching uses the host the Showroom Route reports"
+cverify FAKE_ROUTE_HOST=guide.apps.other.test FAKE_CSP="frame-ancestors https://showroom.example.test" && bad "... and not some other host" || ok "... and not some other host"
 cverify FAKE_CSP="frame-ancestors 'none', frame-ancestors *" && bad "a permissive policy does not mask a blocking one" || ok "a permissive policy does not mask a blocking one"
 cverify FAKE_CSP="FRAME-ANCESTORS *" && ok "CSP directive names are case-insensitive" || bad "CSP directive names are case-insensitive"
 cverify && grep -q 'PASS: Showroom tab' "$fake/verify.out" && ok "a frameable tab target passes (report-only CSP ignored)" || bad "a frameable tab target passes (report-only CSP ignored)"

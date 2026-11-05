@@ -38,6 +38,20 @@ expectation to their username. Verification uses the same identity
 
 ## Shared cluster
 
+A shared lab can run on an RHDP order too. The Field Sourced Content order
+form sets:
+- cluster size: `multinode`, not SNO, for worker MachineSets;
+- worker count and instance type;
+- base workloads, such as OpenShift AI preinstalled;
+- "Create users on cluster?", which creates Keycloak users `user1`…`userN`.
+
+The facilitator reads the user list from the `KeycloakRealmImport` named `sso`
+in the `keycloak` namespace:
+`oc get keycloakrealmimport sso -n keycloak -o jsonpath='{.spec.realm.users[*].username}'`.
+Participants keep minimal rights. Never make them cluster-admin: it makes
+every isolation claim meaningless and lets one participant break the
+workshop for all.
+
 - **One Showroom for everyone.** Showroom's `user_data` cannot vary per user,
   so pages derive each user's namespace in the shell. Pick the rule by who
   creates the namespace:
@@ -68,9 +82,18 @@ expectation to their username. Verification uses the same identity
 - **Cross-user negative controls get a deterministic target.** GitOps deploys a
   facilitator-owned decoy tenant (for example `peer-demo`), so "you cannot
   reach another tenant" never depends on another participant's progress.
-- **Capacity.** The facilitator guide states the per-user footprint times N,
-  plus the shared services. `verify.sh` checks that every user can do the
-  first step. Impersonate with groups:
+- **Capacity.** The facilitator guide states the sizing, worked out like
+  this:
+  1. Per user, add the CPU and memory *requests* of what each participant
+     runs (workbench, Showroom, what the exercises deploy).
+  2. Per worker, take the allocatable capacity of the instance type, minus
+     the requests of pods that run on every node (DaemonSets).
+  3. Reserve one worker's worth for the platform's own pods.
+
+  Workers = 1 + ceil(users ÷ users per worker), and the guide prints that
+  table for 10, 20 and 30 users. Size at order time; adding MachineSet
+  replicas later is the fallback. `verify.sh` checks that every user can do
+  the first step. Impersonate with groups:
   `--as userN --as-group system:authenticated --as-group system:authenticated:oauth`,
   plus `--as-group <g>` for each OpenShift Group that lists the user. `--as`
   alone drops every group, including the ones that grant project
@@ -110,7 +133,11 @@ expectation to their username. Verification uses the same identity
   already handles. Examples are a DataScienceCluster or TektonConfig. In that
   case it is a documented facilitator prerequisite needing the cluster
   owner's approval, removed at teardown.
-- **The console tab.** `ui-config.yml`'s OpenShift Console tab is an iframe. A default console answers `X-Frame-Options: DENY` (verified on OpenShift 5.0), so the tab renders blank. RHDP orders embed the console with the `ocp4_workload_ocp_console_embed` workload. On a pre-existing cluster, remove the tab and link the console from the guide with `link:...[^]`, which opens a new browser tab. Embedding there is a cluster-wide ingress header change that needs the owner's approval. `verify.sh` fails while any `url:` tab points at a page that refuses framing.
+- **The console tab.** `ui-config.yml`'s OpenShift Console tab is an iframe. A default console answers `X-Frame-Options: DENY` (verified on OpenShift 5.0), so the tab renders blank. RHDP orders embed the console with the `ocp4_workload_ocp_console_embed` workload: the router drops `X-Frame-Options` and sets `Content-Security-Policy: frame-ancestors 'self' <Showroom origins>` (often `https://*.apps.<domain>`). On a pre-existing cluster the default is to remove the tab and link the console from the guide with `link:...[^]`, which opens a new browser tab. To embed it there instead, with the owner's approval:
+  - **Cluster-wide.** Use the same header actions in the default IngressController's `spec.httpHeaders.actions.response`: delete `X-Frame-Options`, and set `frame-ancestors` to exactly the Showroom origins, not `*`.
+  - **One app.** Put the same actions in a single Route's `spec.httpHeaders`, for example a workbench.
+
+  Applying it rolls the routers, which can drop Web Terminal sessions, so run it from a workstation and re-check the headers afterwards. `verify.sh` fails while any `url:` tab's target refuses the Showroom origin.
 - **The Showroom chart always creates a 5Gi RWO PVC** (terminal on or off),
   so a default StorageClass is a hard requirement.
 - **Per-event values** (bucket endpoint, model URL) live on an event branch
