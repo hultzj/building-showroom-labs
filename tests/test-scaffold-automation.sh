@@ -39,6 +39,7 @@ trap 'rm -rf "$fake"' EXIT
 cat > "$fake/oc" <<'SH'
 #!/usr/bin/env bash
 case "$*" in
+  *"applications.argoproj.io field-content "*) [[ -n ${FAKE_NO_RHDP:-} ]] || printf 'application.argoproj.io/field-content' ;;
   *applications.argoproj.io*) printf '%b' "$FAKE_APPS" ;;
   *route*) [[ -n ${FAKE_NO_ROUTE:-} ]] && exit 1; printf 'showroom.example.test' ;;
 esac
@@ -81,6 +82,12 @@ FAKE_CURL_RC=22 run_verify "$healthy" \
 rhdp='field-content Synced/Healthy\nfield-content-showroom Synced/Healthy field-content\n'
 FAKE_APPS=$rhdp PATH="$fake:$PATH" LAB_NS=ns env -u LAB_APP bash "$SCAFFOLD/automation/verify.sh" >/dev/null 2>&1 \
   && ok "verify finds an RHDP order's field-content parent without LAB_APP" || bad "verify finds an RHDP order's field-content parent without LAB_APP"
+# Without an RHDP parent, verify falls back to bootstrap.yaml's name.
+FAKE_NO_RHDP=1 FAKE_APPS='CHANGE-ME-lab Synced/Healthy CHANGE-ME-lab\nCHANGE-ME-lab-showroom Synced/Healthy CHANGE-ME-lab\n' \
+  PATH="$fake:$PATH" LAB_NS=ns env -u LAB_APP bash "$SCAFFOLD/automation/verify.sh" >/dev/null 2>&1 \
+  && ok "verify falls back to the bootstrap name without an RHDP parent" || bad "verify falls back to the bootstrap name without an RHDP parent"
+FAKE_NO_RHDP=1 FAKE_APPS=$rhdp PATH="$fake:$PATH" LAB_NS=ns env -u LAB_APP bash "$SCAFFOLD/automation/verify.sh" >/dev/null 2>&1 \
+  && bad "without an RHDP parent, field-content Applications do not satisfy verify" || ok "without an RHDP parent, field-content Applications do not satisfy verify"
 
 n_label=$(grep -c 'app.kubernetes.io/part-of: t$' <<<"$apps" || true)
 [[ $n_label == "$n_apps" ]] && ok "every child Application is labeled part-of its parent" || bad "every child Application is labeled part-of its parent ($n_label of $n_apps)"
@@ -284,8 +291,15 @@ grep -n 'gitops\.repoUrl' "$SKILL_DIR"/references/*.md | grep -v 'gitops\.repoUR
   && bad "references never take gitops.repoUrl without the order's gitops.repoURL" || ok "references never take gitops.repoUrl without the order's gitops.repoURL"
 grep -niE "order('s| itself)? (deployer )?creates (one|an) Application per user" "$SKILL_DIR"/references/*.md \
   && bad "references do not claim the order creates per-user Applications" || ok "references do not claim the order creates per-user Applications"
-grep -q 'apiKey: sk-test' <<<"$(helm template t "$P" --set deployer.domain=x --set litemaas.enabled=true --set litemaas.apiKey=sk-test)" \
-  && ok "the parent passes litemaas to lab-prereqs" || bad "the parent passes litemaas to lab-prereqs"
+# End to end: an order's LiteMaaS values reach the child through the parent's valuesObject.
+helm template field-content "$P" --set deployer.domain=x --set litemaas.enabled=true \
+  --set litemaas.apiUrl=https://m.example.com/v1/ --set litemaas.apiKey=sk-test --set litemaas.model=qwen3-14b |
+  ruby -ryaml -e 'YAML.load_stream(STDIN.read).compact.each { |d| v = d.dig("spec", "source", "helm", "valuesObject"); puts v.to_yaml if d.dig("metadata", "name").to_s.end_with?("-prereqs") }' \
+  > "$fake/prereqs-values.yaml"
+secret=$(helm template field-content "$SCAFFOLD/automation/argocd/components/lab-prereqs" -f "$fake/prereqs-values.yaml" 2>&1 || true)
+ruby -ryaml -e 'd = YAML.load_stream(STDIN.read).compact.find { |x| x["kind"] == "Secret" && x.dig("metadata", "name") == "litemaas" } or exit 1
+  exit 1 unless d.dig("metadata", "namespace") == "CHANGE-ME" && d["stringData"] == {"OPENAI_BASE_URL" => "https://m.example.com/v1", "OPENAI_API_KEY" => "sk-test", "OPENAI_MODEL" => "qwen3-14b"}' <<<"$secret" \
+  && ok "an order's LiteMaaS values become the litemaas Secret through the parent" || bad "an order's LiteMaaS values become the litemaas Secret through the parent"
 LP="$SCAFFOLD/automation/argocd/components/lab-prereqs"
 helm template t "$LP" --set lab.namespace=ns1 | grep -q 'name: litemaas' \
   && bad "no LiteMaaS Secret without the order's key" || ok "no LiteMaaS Secret without the order's key"
