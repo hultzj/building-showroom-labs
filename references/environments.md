@@ -78,9 +78,12 @@ workshop for all.
 - **Per-user namespaces.** Either participants self-provision them as the
   first exercise, or GitOps creates them using RHDP's tenant pattern:
   `rhpds/rhdp-gitops-patterns`, `bootstrap-tenant`, which takes a `username`
-  and binds that User to `edit` in `<username>-<ns>`. On RHDP the order's
-  deployer creates one Application per user. On a pre-existing cluster, the
-  lab ships an ApplicationSet with a list generator, `user1..userN`.
+  and binds that User to `edit` in `<username>-<ns>`. Either way the lab
+  ships an ApplicationSet with a list generator: on RHDP its elements come
+  from `multi_user.users` (the order creates only `field-content`; see
+  upstream `examples/helm/templates/applicationset-per-user.yaml`, but take
+  `repoURL` from `gitops.repoURL | default gitops.repoUrl`, which that example
+  does not); on a pre-existing cluster, list `user1..userN` in `values.yaml`.
 - **Cross-user negative controls get a deterministic target.** GitOps deploys a
   facilitator-owned decoy tenant (for example `peer-demo`), so "you cannot
   reach another tenant" never depends on another participant's progress.

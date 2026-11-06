@@ -81,7 +81,8 @@ this list before the first push.
 **Rewire**
 
 - **Playbook source.** Point `ansible.repository.url` and `branch` at the
-  lab's own repo (the parent's `gitops.repoUrl` and `gitops.revision`), and
+  lab's own repo (the parent's `gitops.repoURL | default gitops.repoUrl`, as
+  `applications.yaml` computes it, and `gitops.revision`), and
   `path` at `<gitops.basePath>/components/<name>/playbooks`, where the copied
   `site.yml` lives. Otherwise the Job runs upstream's demo playbook. It clones the
   branch tip, so the revision should be the branch Argo CD syncs.

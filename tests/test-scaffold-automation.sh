@@ -276,8 +276,14 @@ P="$SCAFFOLD/automation/argocd"
 form=$(helm template t "$P" --set deployer.domain=x --set gitops.repoURL=https://example.com/form.git)
 [[ $(grep -c 'example.com/form.git' <<<"$form") == 2 ]] \
   && ok "the order form's gitops.repoURL reaches both children" || bad "the order form's gitops.repoURL reaches both children"
-grep -q 'example.com/form.git' <<<"$(helm template t "$P" --set deployer.domain=x)" \
-  && bad "without an order, children use gitops.repoUrl" || ok "without an order, children use gitops.repoUrl"
+boot=$(helm template t "$P" --set deployer.domain=x --set gitops.repoUrl=https://example.com/bootstrap.git)
+grep -q '^    repoURL: https://example.com/bootstrap.git$' <<<"$boot" && grep -q '^ *repoUrl: "https://example.com/bootstrap.git"$' <<<"$boot" \
+  && ok "without an order, both children use gitops.repoUrl" || bad "without an order, both children use gitops.repoUrl"
+# Recipes must not send builders back to the scaffold default when the order names another repo.
+grep -n 'gitops\.repoUrl' "$SKILL_DIR"/references/*.md | grep -v 'gitops\.repoURL' \
+  && bad "references never take gitops.repoUrl without the order's gitops.repoURL" || ok "references never take gitops.repoUrl without the order's gitops.repoURL"
+grep -niE "order('s| itself)? (deployer )?creates (one|an) Application per user" "$SKILL_DIR"/references/*.md \
+  && bad "references do not claim the order creates per-user Applications" || ok "references do not claim the order creates per-user Applications"
 grep -q 'apiKey: sk-test' <<<"$(helm template t "$P" --set deployer.domain=x --set litemaas.enabled=true --set litemaas.apiKey=sk-test)" \
   && ok "the parent passes litemaas to lab-prereqs" || bad "the parent passes litemaas to lab-prereqs"
 LP="$SCAFFOLD/automation/argocd/components/lab-prereqs"
@@ -288,7 +294,8 @@ for u in https://m.example.com https://m.example.com/ https://m.example.com/v1 h
     --set litemaas.apiKey=k --set litemaas.model=m | awk '$1 == "OPENAI_BASE_URL:" {print $2}')
   [[ $got == '"https://m.example.com/v1"' ]] && ok "LiteMaaS base URL $u normalises to /v1" || bad "LiteMaaS base URL $u normalises to /v1 (got $got)"
 done
-helm template t "$LP" --set lab.namespace=ns1 --set litemaas.enabled=true --set litemaas.apiUrl=https://m.example.com >/dev/null 2>&1 \
-  && bad "an enabled LiteMaaS without a key fails to render" || ok "an enabled LiteMaaS without a key fails to render"
+nokey=$(helm template t "$LP" --set lab.namespace=ns1 --set litemaas.enabled=true --set litemaas.apiUrl=https://m.example.com --set litemaas.model=m 2>&1 || true)
+grep -q 'litemaas.apiKey is required' <<<"$nokey" \
+  && ok "an enabled LiteMaaS without a key fails to render" || bad "an enabled LiteMaaS without a key fails to render"
 
 exit "$errors"
