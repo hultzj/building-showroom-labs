@@ -109,6 +109,43 @@ workshop for all.
 - **`User` objects exist only after a first login.** Check the identity
   provider instead, and log in once as the first and last user before class.
 
+## What an RHDP order differs in
+
+Seen on a Field Sourced Content - OpenShift Base order (OpenShift 4.22.18,
+OpenShift AI 3.5.2, 2026-11-06); each broke a lab step that passed on a
+reused test cluster.
+
+- **Ingress certificate.** The IngressController serves a public
+  certificate from cert-manager (`spec.defaultCertificate`:
+  `cert-manager-ingress-cert`); `router-certs-default` does not exist.
+  Reference the Secret from `spec.defaultCertificate.name`, falling back to
+  `router-certs-default`, and check a Gateway listener's `ResolvedRefs`:
+  the Gateway reports `Programmed` even when its listener's certificate is
+  invalid.
+- **Trust bundle.** `default-ingress-cert` (`openshift-config-managed`)
+  then holds a chain that stops at a cross-signed intermediate. `curl` and
+  Python 3.13 accept that partial chain; Python 3.12 (the OpenShift AI
+  workbench image) and `openssl verify` do not. Build the bundle a client
+  verifies with from the system CAs plus that chain:
+  `{ cat /etc/pki/tls/certs/ca-bundle.crt; oc get configmap default-ingress-cert -n openshift-config-managed -o jsonpath='{.data.ca-bundle\.crt}'; } > ~/ingress-ca.crt`.
+  Self-signed ingress keeps working.
+- **OpenShift AI base workload.** Only `dashboard` and `workbenches` are
+  `Managed`; enable the components the lab needs (`kserve`,
+  `modelregistry`, `trustyai`, …) as a facilitator step, and check them in
+  `verify.sh`.
+- **No GPU.** Add a node from a worker MachineSet if the lab needs one.
+- **Several replicas.** Gateways scale out (ten inference-gateway pods were
+  seen); read logs by label (`oc logs -l … --max-log-requests=20`), never
+  the first pod by name.
+- **Web Terminal idles out.** A session with no keystrokes stops after 15
+  minutes even while a command runs, and the workspace is stopped. For long
+  waits, participants run `wtoctl set timeout 4h` once; automation that
+  drives the terminal must account for it.
+- **Unreachable is not refused.** A connection to a closed port on a
+  ClusterIP is dropped, not refused, so a break-and-restore that points a
+  client at a dead port ends in the route's timeout (an HTML 504), not the
+  application's error. Parse defensively: report non-JSON as an error.
+
 ## Pre-existing cluster (no RHDP order)
 
 - The facilitator guide lists the cluster prerequisites, each with a check
