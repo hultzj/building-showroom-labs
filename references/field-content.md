@@ -47,7 +47,8 @@ This page lists what the skill relies on and where it deliberately differs.
 - **Data back to the order.** A ConfigMap labelled
   `demo.redhat.com/userinfo: ""` is meant to pass its data keys to the order
   owner (URLs, access notes). The Field Sourced Content - OpenShift Base order
-  did not show it (2026-11-06; the workload exits before Argo CD syncs), so the
+  did not show it (2026-11-06; cause not established, and the workload does
+  not wait for Argo CD to sync), so the
   facilitator page also gives the Showroom URL:
   `https://showroom-<showroom namespace>.<apps domain>`.
 - **Logging in.** That order replaces kubeadmin with Keycloak SSO while it
