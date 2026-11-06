@@ -91,6 +91,15 @@ re-sync. Do not patch the cluster by hand.
 
 A step that only works the second time is not idempotent; fix it.
 
+A reused test cluster hides first-run problems (node labels from an earlier
+experiment, a certificate Secret that happens to exist). Before release, run
+the whole lab once on a fresh environment of the delivery type, an RHDP order
+when that is how it ships; `environments.md` lists what an order differs in.
+A status of `ready` with nothing deployed is not proof (an `NVIDIADriver`
+reported `ready` while running no driver pod; the GPU Operator logged that it
+skips node labelling until a GPUCluster or ClusterPolicy exists, and the
+driver pod appeared once one did): waits check the pods or the endpoint the next step uses.
+
 ## 5. Finish
 
 - `bash scripts/check-lab.sh` (strict) and `npm run build` pass.
