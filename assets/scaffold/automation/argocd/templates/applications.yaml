@@ -1,3 +1,5 @@
+{{- /* An RHDP order injects its form's repo URL as gitops.repoURL; it wins, so children sync the repo the order names. */}}
+{{- $repo := .Values.gitops.repoURL | default .Values.gitops.repoUrl }}
 {{- if .Values.showroom.enabled }}
 ---
 apiVersion: argoproj.io/v1alpha1
@@ -21,7 +23,7 @@ spec:
         showroom:
           namespace: {{ .Values.showroom.namespace }}
           content:
-            repoUrl: {{ .Values.gitops.repoUrl | quote }}
+            repoUrl: {{ $repo | quote }}
             repoRef: {{ .Values.gitops.revision | quote }}
           terminal:
             enabled: {{ .Values.showroom.terminal }}
@@ -62,7 +64,7 @@ metadata:
 spec:
   project: {{ .Values.argocd.project }}
   source:
-    repoURL: {{ .Values.gitops.repoUrl }}
+    repoURL: {{ $repo }}
     targetRevision: {{ .Values.gitops.revision | quote }}
     path: {{ .Values.gitops.basePath }}/components/lab-prereqs
     helm:
@@ -75,6 +77,8 @@ spec:
           namespace: {{ .Values.showroom.namespace | quote }}
         deployer:
           domain: {{ .Values.deployer.domain | quote }}
+        litemaas:
+          {{- toYaml .Values.litemaas | nindent 10 }}
   destination:
     server: https://kubernetes.default.svc
     namespace: {{ .Values.lab.namespace }}

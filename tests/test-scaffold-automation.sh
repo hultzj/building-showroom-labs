@@ -77,6 +77,10 @@ FAKE_NO_ROUTE=1 run_verify "$healthy" \
   && bad "verify fails when the Showroom route is missing" || ok "verify fails when the Showroom route is missing"
 FAKE_CURL_RC=22 run_verify "$healthy" \
   && bad "verify fails when the Showroom route does not answer" || ok "verify fails when the Showroom route does not answer"
+# An RHDP order always names the parent field-content; verify finds it without LAB_APP.
+rhdp='field-content Synced/Healthy\nfield-content-showroom Synced/Healthy field-content\n'
+FAKE_APPS=$rhdp PATH="$fake:$PATH" LAB_NS=ns env -u LAB_APP bash "$SCAFFOLD/automation/verify.sh" >/dev/null 2>&1 \
+  && ok "verify finds an RHDP order's field-content parent without LAB_APP" || bad "verify finds an RHDP order's field-content parent without LAB_APP"
 
 n_label=$(grep -c 'app.kubernetes.io/part-of: t$' <<<"$apps" || true)
 [[ $n_label == "$n_apps" ]] && ok "every child Application is labeled part-of its parent" || bad "every child Application is labeled part-of its parent ($n_label of $n_apps)"
@@ -266,5 +270,25 @@ helm template t "$SCAFFOLD/automation/argocd/components/lab-prereqs" --set lab.n
 helm template t "$SCAFFOLD/automation/argocd" --set deployer.domain=x >/dev/null
 helm template t "$SCAFFOLD/automation/argocd/components/lab-prereqs" --set lab.namespace=ns1 --set partOf=t | grep -q 'app.kubernetes.io/part-of: t' \
   && ok "lab namespace carries the lab's part-of label" || bad "lab namespace carries the lab's part-of label"
+
+# --- values an RHDP order injects (rhpds/core_workloads ocp4_workload_field_content) ---
+P="$SCAFFOLD/automation/argocd"
+form=$(helm template t "$P" --set deployer.domain=x --set gitops.repoURL=https://example.com/form.git)
+[[ $(grep -c 'example.com/form.git' <<<"$form") == 2 ]] \
+  && ok "the order form's gitops.repoURL reaches both children" || bad "the order form's gitops.repoURL reaches both children"
+grep -q 'example.com/form.git' <<<"$(helm template t "$P" --set deployer.domain=x)" \
+  && bad "without an order, children use gitops.repoUrl" || ok "without an order, children use gitops.repoUrl"
+grep -q 'apiKey: sk-test' <<<"$(helm template t "$P" --set deployer.domain=x --set litemaas.enabled=true --set litemaas.apiKey=sk-test)" \
+  && ok "the parent passes litemaas to lab-prereqs" || bad "the parent passes litemaas to lab-prereqs"
+LP="$SCAFFOLD/automation/argocd/components/lab-prereqs"
+helm template t "$LP" --set lab.namespace=ns1 | grep -q 'name: litemaas' \
+  && bad "no LiteMaaS Secret without the order's key" || ok "no LiteMaaS Secret without the order's key"
+for u in https://m.example.com https://m.example.com/ https://m.example.com/v1 https://m.example.com/v1/; do
+  got=$(helm template t "$LP" --set lab.namespace=ns1 --set litemaas.enabled=true --set litemaas.apiUrl=$u \
+    --set litemaas.apiKey=k --set litemaas.model=m | awk '$1 == "OPENAI_BASE_URL:" {print $2}')
+  [[ $got == '"https://m.example.com/v1"' ]] && ok "LiteMaaS base URL $u normalises to /v1" || bad "LiteMaaS base URL $u normalises to /v1 (got $got)"
+done
+helm template t "$LP" --set lab.namespace=ns1 --set litemaas.enabled=true --set litemaas.apiUrl=https://m.example.com >/dev/null 2>&1 \
+  && bad "an enabled LiteMaaS without a key fails to render" || ok "an enabled LiteMaaS without a key fails to render"
 
 exit "$errors"

@@ -19,11 +19,25 @@ This page lists what the skill relies on and where it deliberately differs.
 
 ## The contract
 
-- **How RHDP deploys it.** The Field Content CI takes a repo URL and a chart
-  path. Its `ocp4_workload_field_content` workload creates an Argo CD
-  Application for the chart, injects `deployer.domain` and `deployer.apiUrl`,
-  and overrides `argocd.project` to `deployed`. Everything is a Helm chart;
-  sync waves order it.
+- **How RHDP deploys it.** The order form's GitOps section (*Existing Gitops
+  Repo?*, then *GitOps Repo*, *GitOps Revision*, *GitOps Path*) names the repo,
+  branch and chart path (`automation/argocd`). Its `ocp4_workload_field_content`
+  workload creates one Argo CD Application, always named `field-content`, in
+  `openshift-gitops`, project `default`, with automated sync but no prune, no
+  selfHeal and no retry. Everything is a Helm chart; sync waves order it.
+- **Values the order injects** (read from `rhpds/core_workloads`,
+  `roles/ocp4_workload_field_content`, 2026-11):
+
+  | Value | Source on the form | Scaffold use |
+  |---|---|---|
+  | `deployer.domain`, `deployer.apiUrl` | the cluster | Showroom route, userinfo |
+  | `gitops.repoURL`, `gitops.revision`, `gitops.path` | GitOps Repo, Revision, Path | `repoURL` and `revision` override the scaffold's `gitops.repoUrl` and `gitops.revision`, so children sync what the order names |
+  | `litemaas.enabled`, `apiUrl`, `apiKey`, `model` | *Enable LiteMaaS/MaaS API Keys*, model, lifetime | `lab-prereqs` writes Secret `litemaas` (`OPENAI_BASE_URL` ending in `/v1`, `OPENAI_API_KEY`, `OPENAI_MODEL`) |
+  | `multi_user.num_users`, `multi_user.users` (`[{username: user1}, …]`) | *Create users on cluster?* | per-user resources (`environments.md`) |
+
+  Release name, and so `partOf` and every child's name prefix, is
+  `field-content` on an order. `verify.sh` finds that parent without
+  `LAB_APP`; `make bootstrap` uses `bootstrap.yaml`'s name instead.
 - **Health.** RHDP monitors resources labelled
   `demo.redhat.com/application: <demo name>`. The scaffold's lab namespace
   carries it with the lab's name; label your workloads the same way.
@@ -31,6 +45,12 @@ This page lists what the skill relies on and where it deliberately differs.
   `demo.redhat.com/userinfo: ""` passes its data keys to the order owner (URLs,
   access notes). Put credentials there only when the order owner is meant to
   see them.
+- **The LiteMaaS key is visible.** RHDP passes it in the Application's Helm
+  values, so anyone who can read Applications in `openshift-gitops` sees it,
+  and the scaffold copies it to the `lab-prereqs` child. A terminal granted
+  `get` on Secret `litemaas` exposes it to anyone with the Showroom URL, and a
+  terminal that can create pods can mount any Secret in that namespace. Say
+  both on the facilitator page.
 
 ## Pick a pattern
 

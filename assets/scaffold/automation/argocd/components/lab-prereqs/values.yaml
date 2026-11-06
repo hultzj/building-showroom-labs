@@ -7,3 +7,8 @@ deployer:
   domain: ""
 argocdNamespace: openshift-gitops
 partOf: ""
+litemaas:
+  enabled: false
+  apiUrl: ""
+  apiKey: ""
+  model: ""

@@ -45,8 +45,10 @@ form sets:
 - base workloads, such as OpenShift AI preinstalled;
 - "Create users on cluster?", which creates Keycloak users `user1`…`userN`.
 
-The facilitator reads the user list from the `KeycloakRealmImport` named `sso`
-in the `keycloak` namespace:
+The chart also receives the list as `multi_user.users` (`[{username: user1}, …]`)
+and `multi_user.num_users`, so a per-user Application or namespace can be
+templated from it directly (`field-content.md`). The facilitator reads the same
+list from the `KeycloakRealmImport` named `sso` in the `keycloak` namespace:
 `oc get keycloakrealmimport sso -n keycloak -o jsonpath='{.spec.realm.users[*].username}'`.
 Participants keep minimal rights. Never make them cluster-admin: it makes
 every isolation claim meaningless and lets one participant break the
