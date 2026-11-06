@@ -5,7 +5,9 @@ and the guide runs clean from the first step to the last on a fresh install.
 
 ## 1. Prepare the test cluster (once)
 
-RHDP clusters come with these in place. A bare test cluster needs:
+RHDP clusters come with these in place; on a Field Content order, log in as
+the order page's `admin` user, not kubeadmin (`field-content.md`). A bare test
+cluster needs:
 
 - **OpenShift GitOps.** Check for `oc get csv -n openshift-gitops-operator`.
   If it is missing, ask the cluster owner before installing it; it is a

@@ -13,5 +13,7 @@ tabs:
   - name: Terminal
     path: /terminal
     port: 443
+  # Remove this tab where the console cannot be framed (verify.sh FAILs): pre-existing clusters,
+  # and the RHDP Field Sourced Content - OpenShift Base order. The guide links the console instead.
   - name: OpenShift Console
     url: 'https://console-openshift-console.${DOMAIN}'
