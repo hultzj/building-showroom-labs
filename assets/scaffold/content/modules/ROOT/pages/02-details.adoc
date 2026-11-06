@@ -8,7 +8,8 @@
 
 | Every participant
 | The Showroom terminal tab (`oc` is already logged in) and the OpenShift
-Console tab.
+Console tab. Where the console tab is removed (see `ui-config.yml`), say that
+the console opens in a new browser tab from the link under *Access details*.
 
 | CHANGE-ME
 | CHANGE-ME

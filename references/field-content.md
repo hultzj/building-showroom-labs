@@ -28,7 +28,7 @@ This page lists what the skill relies on and where it deliberately differs.
 - **Values the order injects** (read from `rhpds/core_workloads`,
   `roles/ocp4_workload_field_content`, and observed in the `field-content`
   Application of a Field Sourced Content - OpenShift Base order on OpenShift
-  4.22.18, 2026-11-06):
+  4.22.18 with OpenShift AI 3.5.2, 2026-11-06):
 
   | Value | Source on the form | Scaffold use |
   |---|---|---|
