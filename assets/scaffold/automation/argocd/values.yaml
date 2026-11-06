@@ -1,4 +1,5 @@
-# Repository Argo CD syncs the children from (this lab's repo).
+# Repository Argo CD syncs the children from (this lab's repo). An RHDP order injects
+# gitops.repoURL (capital URL) and gitops.revision from its GitOps form fields; those win.
 gitops:
   repoUrl: https://github.com/CHANGE-ME/CHANGE-ME.git
   revision: main
@@ -6,7 +7,7 @@ gitops:
 
 argocd:
   namespace: openshift-gitops
-  # The field-content workload overrides this to "deployed".
+  # The field-content workload's own Application uses "default" and does not set this.
   project: default
 
 lab:
@@ -34,6 +35,14 @@ showroom:
 deployer:
   domain: ""
   apiUrl: ""
+
+# Injected by an RHDP order with "Enable LiteMaaS/MaaS API Keys" checked; never put a key in git.
+# lab-prereqs turns it into the Secret litemaas (OPENAI_BASE_URL, OPENAI_API_KEY, OPENAI_MODEL).
+litemaas:
+  enabled: false
+  apiUrl: ""
+  apiKey: ""
+  model: ""
 
 fieldContent:
   deploymentType: helm

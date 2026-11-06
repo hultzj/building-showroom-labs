@@ -5,8 +5,13 @@ set -uo pipefail
 GITOPS_NS=${GITOPS_NS:-openshift-gitops}
 SHOWROOM_NS=${SHOWROOM_NS:-showroom}
 LAB_NS=${LAB_NS:-CHANGE-ME}
-# The parent Application name; children are named <LAB_APP>-<component>.
-LAB_APP=${LAB_APP:-CHANGE-ME-lab}
+# The parent Application name; children are named <LAB_APP>-<component>. An RHDP order always names
+# it field-content; make bootstrap uses bootstrap.yaml's name.
+if [[ -z ${LAB_APP:-} ]]; then
+  LAB_APP=CHANGE-ME-lab
+  [[ -n $(oc -n "$GITOPS_NS" get applications.argoproj.io field-content -o name --ignore-not-found 2>/dev/null) ]] &&
+    LAB_APP=field-content
+fi
 # Check as the participant identity (environments.md), not as the facilitator: the terminal
 # ServiceAccount below, or a participant user (--as userN --as-group system:authenticated --as-group system:authenticated:oauth).
 TERMINAL_SA="system:serviceaccount:${SHOWROOM_NS}:showroom"

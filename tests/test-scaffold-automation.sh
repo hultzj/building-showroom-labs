@@ -39,6 +39,7 @@ trap 'rm -rf "$fake"' EXIT
 cat > "$fake/oc" <<'SH'
 #!/usr/bin/env bash
 case "$*" in
+  *"applications.argoproj.io field-content "*) [[ -n ${FAKE_NO_RHDP:-} ]] || printf 'application.argoproj.io/field-content' ;;
   *applications.argoproj.io*) printf '%b' "$FAKE_APPS" ;;
   *route*) [[ -n ${FAKE_NO_ROUTE:-} ]] && exit 1; printf 'showroom.example.test' ;;
 esac
@@ -77,6 +78,16 @@ FAKE_NO_ROUTE=1 run_verify "$healthy" \
   && bad "verify fails when the Showroom route is missing" || ok "verify fails when the Showroom route is missing"
 FAKE_CURL_RC=22 run_verify "$healthy" \
   && bad "verify fails when the Showroom route does not answer" || ok "verify fails when the Showroom route does not answer"
+# An RHDP order always names the parent field-content; verify finds it without LAB_APP.
+rhdp='field-content Synced/Healthy\nfield-content-showroom Synced/Healthy field-content\n'
+FAKE_APPS=$rhdp PATH="$fake:$PATH" LAB_NS=ns env -u LAB_APP bash "$SCAFFOLD/automation/verify.sh" >/dev/null 2>&1 \
+  && ok "verify finds an RHDP order's field-content parent without LAB_APP" || bad "verify finds an RHDP order's field-content parent without LAB_APP"
+# Without an RHDP parent, verify falls back to bootstrap.yaml's name.
+FAKE_NO_RHDP=1 FAKE_APPS='CHANGE-ME-lab Synced/Healthy CHANGE-ME-lab\nCHANGE-ME-lab-showroom Synced/Healthy CHANGE-ME-lab\n' \
+  PATH="$fake:$PATH" LAB_NS=ns env -u LAB_APP bash "$SCAFFOLD/automation/verify.sh" >/dev/null 2>&1 \
+  && ok "verify falls back to the bootstrap name without an RHDP parent" || bad "verify falls back to the bootstrap name without an RHDP parent"
+FAKE_NO_RHDP=1 FAKE_APPS=$rhdp PATH="$fake:$PATH" LAB_NS=ns env -u LAB_APP bash "$SCAFFOLD/automation/verify.sh" >/dev/null 2>&1 \
+  && bad "without an RHDP parent, field-content Applications do not satisfy verify" || ok "without an RHDP parent, field-content Applications do not satisfy verify"
 
 n_label=$(grep -c 'app.kubernetes.io/part-of: t$' <<<"$apps" || true)
 [[ $n_label == "$n_apps" ]] && ok "every child Application is labeled part-of its parent" || bad "every child Application is labeled part-of its parent ($n_label of $n_apps)"
@@ -266,5 +277,39 @@ helm template t "$SCAFFOLD/automation/argocd/components/lab-prereqs" --set lab.n
 helm template t "$SCAFFOLD/automation/argocd" --set deployer.domain=x >/dev/null
 helm template t "$SCAFFOLD/automation/argocd/components/lab-prereqs" --set lab.namespace=ns1 --set partOf=t | grep -q 'app.kubernetes.io/part-of: t' \
   && ok "lab namespace carries the lab's part-of label" || bad "lab namespace carries the lab's part-of label"
+
+# --- values an RHDP order injects (rhpds/core_workloads ocp4_workload_field_content) ---
+P="$SCAFFOLD/automation/argocd"
+form=$(helm template t "$P" --set deployer.domain=x --set gitops.repoURL=https://example.com/form.git)
+[[ $(grep -c 'example.com/form.git' <<<"$form") == 2 ]] \
+  && ok "the order form's gitops.repoURL reaches both children" || bad "the order form's gitops.repoURL reaches both children"
+boot=$(helm template t "$P" --set deployer.domain=x --set gitops.repoUrl=https://example.com/bootstrap.git)
+grep -q '^    repoURL: https://example.com/bootstrap.git$' <<<"$boot" && grep -q '^ *repoUrl: "https://example.com/bootstrap.git"$' <<<"$boot" \
+  && ok "without an order, both children use gitops.repoUrl" || bad "without an order, both children use gitops.repoUrl"
+# Recipes must not send builders back to the scaffold default when the order names another repo.
+grep -n 'gitops\.repoUrl' "$SKILL_DIR"/references/*.md | grep -v 'gitops\.repoURL' \
+  && bad "references never take gitops.repoUrl without the order's gitops.repoURL" || ok "references never take gitops.repoUrl without the order's gitops.repoURL"
+grep -niE "order('s| itself)? (deployer )?creates (one|an) Application per user" "$SKILL_DIR"/references/*.md \
+  && bad "references do not claim the order creates per-user Applications" || ok "references do not claim the order creates per-user Applications"
+# End to end: an order's LiteMaaS values reach the child through the parent's valuesObject.
+helm template field-content "$P" --set deployer.domain=x --set litemaas.enabled=true \
+  --set litemaas.apiUrl=https://m.example.com/v1/ --set litemaas.apiKey=sk-test --set litemaas.model=qwen3-14b |
+  ruby -ryaml -e 'YAML.load_stream(STDIN.read).compact.each { |d| v = d.dig("spec", "source", "helm", "valuesObject"); puts v.to_yaml if d.dig("metadata", "name").to_s.end_with?("-prereqs") }' \
+  > "$fake/prereqs-values.yaml"
+secret=$(helm template field-content "$SCAFFOLD/automation/argocd/components/lab-prereqs" -f "$fake/prereqs-values.yaml" 2>&1 || true)
+ruby -ryaml -e 'd = YAML.load_stream(STDIN.read).compact.find { |x| x["kind"] == "Secret" && x.dig("metadata", "name") == "litemaas" } or exit 1
+  exit 1 unless d.dig("metadata", "namespace") == "CHANGE-ME" && d["stringData"] == {"OPENAI_BASE_URL" => "https://m.example.com/v1", "OPENAI_API_KEY" => "sk-test", "OPENAI_MODEL" => "qwen3-14b"}' <<<"$secret" \
+  && ok "an order's LiteMaaS values become the litemaas Secret through the parent" || bad "an order's LiteMaaS values become the litemaas Secret through the parent"
+LP="$SCAFFOLD/automation/argocd/components/lab-prereqs"
+helm template t "$LP" --set lab.namespace=ns1 | grep -q 'name: litemaas' \
+  && bad "no LiteMaaS Secret without the order's key" || ok "no LiteMaaS Secret without the order's key"
+for u in https://m.example.com https://m.example.com/ https://m.example.com/v1 https://m.example.com/v1/; do
+  got=$(helm template t "$LP" --set lab.namespace=ns1 --set litemaas.enabled=true --set litemaas.apiUrl=$u \
+    --set litemaas.apiKey=k --set litemaas.model=m | awk '$1 == "OPENAI_BASE_URL:" {print $2}')
+  [[ $got == '"https://m.example.com/v1"' ]] && ok "LiteMaaS base URL $u normalises to /v1" || bad "LiteMaaS base URL $u normalises to /v1 (got $got)"
+done
+nokey=$(helm template t "$LP" --set lab.namespace=ns1 --set litemaas.enabled=true --set litemaas.apiUrl=https://m.example.com --set litemaas.model=m 2>&1 || true)
+grep -q 'litemaas.apiKey is required' <<<"$nokey" \
+  && ok "an enabled LiteMaaS without a key fails to render" || bad "an enabled LiteMaaS without a key fails to render"
 
 exit "$errors"

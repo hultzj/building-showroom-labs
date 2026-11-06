@@ -7,8 +7,12 @@ can skip this page.
 == Provision
 
 *RHDP:* order the Field Content CI with this repository's URL and the path
-`automation/argocd`. The order deploys the Showroom guide and the lab
-prerequisites through OpenShift GitOps.
+`automation/argocd` (*Existing Gitops Repo?* checked, then *GitOps Repo*,
+*GitOps Revision* and *GitOps Path*). The order deploys the Showroom guide and
+the lab prerequisites through OpenShift GitOps. When it shows *Running*, the
+guide is at `https://showroom-{showroom_namespace}.<apps domain>` (the order's
+console URL without `console-openshift-console.`); log in to `oc` as the
+order's `admin` user.
 
 *Any other OpenShift cluster* with OpenShift GitOps installed, from a
 cluster-admin shell in a checkout of this repository:

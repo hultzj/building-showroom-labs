@@ -14,10 +14,10 @@ automation/
     components/lab-prereqs/     this lab's resources, as a plain Helm chart
 ```
 
-**How RHDP deploys it:** order the Field Content CI with the repo URL and path
-`automation/argocd`. The workload creates the parent Application, injects
-`deployer.domain` and `deployer.apiUrl`, and overrides `argocd.project` to
-`deployed`. On any other cluster, `make -C automation bootstrap` applies
+**How RHDP deploys it:** order the Field Content CI with the repo URL, the
+branch as *GitOps Revision*, and path `automation/argocd`. The workload creates
+the parent Application `field-content` and injects `deployer.*`, `gitops.*` and,
+when ordered, `litemaas.*` and `multi_user.*` (`field-content.md`). On any other cluster, `make -C automation bootstrap` applies
 `bootstrap.yaml` with the cluster's ingress domain filled in.
 
 ## Children

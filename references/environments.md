@@ -45,8 +45,10 @@ form sets:
 - base workloads, such as OpenShift AI preinstalled;
 - "Create users on cluster?", which creates Keycloak users `user1`…`userN`.
 
-The facilitator reads the user list from the `KeycloakRealmImport` named `sso`
-in the `keycloak` namespace:
+The chart also receives the list as `multi_user.users` (`[{username: user1}, …]`)
+and `multi_user.num_users`, so a per-user Application or namespace can be
+templated from it directly (`field-content.md`). The facilitator reads the same
+list from the `KeycloakRealmImport` named `sso` in the `keycloak` namespace:
 `oc get keycloakrealmimport sso -n keycloak -o jsonpath='{.spec.realm.users[*].username}'`.
 Participants keep minimal rights. Never make them cluster-admin: it makes
 every isolation claim meaningless and lets one participant break the
@@ -76,9 +78,12 @@ workshop for all.
 - **Per-user namespaces.** Either participants self-provision them as the
   first exercise, or GitOps creates them using RHDP's tenant pattern:
   `rhpds/rhdp-gitops-patterns`, `bootstrap-tenant`, which takes a `username`
-  and binds that User to `edit` in `<username>-<ns>`. On RHDP the order's
-  deployer creates one Application per user. On a pre-existing cluster, the
-  lab ships an ApplicationSet with a list generator, `user1..userN`.
+  and binds that User to `edit` in `<username>-<ns>`. Either way the lab
+  ships an ApplicationSet with a list generator: on RHDP its elements come
+  from `multi_user.users` (the order creates only `field-content`; see
+  upstream `examples/helm/templates/applicationset-per-user.yaml`, but take
+  `repoURL` from `gitops.repoURL | default gitops.repoUrl`, which that example
+  does not); on a pre-existing cluster, list `user1..userN` in `values.yaml`.
 - **Cross-user negative controls get a deterministic target.** GitOps deploys a
   facilitator-owned decoy tenant (for example `peer-demo`), so "you cannot
   reach another tenant" never depends on another participant's progress.
@@ -133,7 +138,7 @@ workshop for all.
   already handles. Examples are a DataScienceCluster or TektonConfig. In that
   case it is a documented facilitator prerequisite needing the cluster
   owner's approval, removed at teardown.
-- **The console tab.** `ui-config.yml`'s OpenShift Console tab is an iframe. A default console answers `X-Frame-Options: DENY` (verified on OpenShift 5.0), so the tab renders blank. RHDP orders embed the console with the `ocp4_workload_ocp_console_embed` workload: the router drops `X-Frame-Options` and sets `Content-Security-Policy: frame-ancestors 'self' <Showroom origins>` (often `https://*.apps.<domain>`). On a pre-existing cluster the default is to remove the tab and link the console from the guide with `link:...[^]`, which opens a new browser tab. To embed it there instead, with the owner's approval:
+- **The console tab.** `ui-config.yml`'s OpenShift Console tab is an iframe. A default console answers `X-Frame-Options: DENY` (verified on OpenShift 5.0), so the tab renders blank. Some RHDP orders embed the console with the `ocp4_workload_ocp_console_embed` workload; the Field Sourced Content - OpenShift Base order does not (`X-Frame-Options: DENY` on OpenShift 4.22.18, 2026-11-06), so remove the tab there as on a pre-existing cluster. The embedding workload: the router drops `X-Frame-Options` and sets `Content-Security-Policy: frame-ancestors 'self' <Showroom origins>` (often `https://*.apps.<domain>`). On a pre-existing cluster the default is to remove the tab and link the console from the guide with `link:...[^]`, which opens a new browser tab. To embed it there instead, with the owner's approval:
   - **Cluster-wide.** Use the same header actions in the default IngressController's `spec.httpHeaders.actions.response`: delete `X-Frame-Options`, and set `frame-ancestors` to exactly the Showroom origins, not `*`.
   - **One app.** Put the same actions in a single Route's `spec.httpHeaders`, for example a workbench.
 

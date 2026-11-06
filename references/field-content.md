@@ -19,18 +19,50 @@ This page lists what the skill relies on and where it deliberately differs.
 
 ## The contract
 
-- **How RHDP deploys it.** The Field Content CI takes a repo URL and a chart
-  path. Its `ocp4_workload_field_content` workload creates an Argo CD
-  Application for the chart, injects `deployer.domain` and `deployer.apiUrl`,
-  and overrides `argocd.project` to `deployed`. Everything is a Helm chart;
-  sync waves order it.
+- **How RHDP deploys it.** The order form's GitOps section (*Existing Gitops
+  Repo?*, then *GitOps Repo*, *GitOps Revision*, *GitOps Path*) names the repo,
+  branch and chart path (`automation/argocd`). Its `ocp4_workload_field_content`
+  workload creates one Argo CD Application, always named `field-content`, in
+  `openshift-gitops`, project `default`, with automated sync but no prune, no
+  selfHeal and no retry. Everything is a Helm chart; sync waves order it.
+- **Values the order injects** (read from `rhpds/core_workloads`,
+  `roles/ocp4_workload_field_content`, and observed in the `field-content`
+  Application of a Field Sourced Content - OpenShift Base order on OpenShift
+  4.22.18 with OpenShift AI 3.5.2, 2026-11-06):
+
+  | Value | Source on the form | Scaffold use |
+  |---|---|---|
+  | `deployer.domain`, `deployer.apiUrl` | the cluster | Showroom route, userinfo |
+  | `gitops.repoURL`, `gitops.revision`, `gitops.path` | GitOps Repo, Revision, Path | `repoURL` and `revision` override the scaffold's `gitops.repoUrl` and `gitops.revision`, so children sync what the order names |
+  | `litemaas.enabled`, `apiUrl`, `apiKey`, `model` | *Enable LiteMaaS/MaaS API Keys*, model, lifetime | `lab-prereqs` writes Secret `litemaas` (`OPENAI_BASE_URL` ending in `/v1`, `OPENAI_API_KEY`, `OPENAI_MODEL`) |
+  | `multi_user.num_users`, `multi_user.users` (`[{username: user1}, …]`) | *Create users on cluster?* | per-user resources (`environments.md`); in the role source, not yet seen live (absent with users off, where `user.count: 1` appeared) |
+  | `openshift.{adminUsername,adminPassword,consoleUrl}`, `keycloak.{adminUser,adminPassword,consoleUrl}`, `rhoai.dashboardUrl`, `aap.*`, `bases.{rhoai,aap,virt}`, `guid`, `user.count` | the catalog item | unused; seen live, not in the role source |
+
+  Release name, and so `partOf` and every child's name prefix, is
+  `field-content` on an order. `verify.sh` finds that parent without
+  `LAB_APP`; `make bootstrap` uses `bootstrap.yaml`'s name instead.
 - **Health.** RHDP monitors resources labelled
   `demo.redhat.com/application: <demo name>`. The scaffold's lab namespace
   carries it with the lab's name; label your workloads the same way.
 - **Data back to the order.** A ConfigMap labelled
-  `demo.redhat.com/userinfo: ""` passes its data keys to the order owner (URLs,
-  access notes). Put credentials there only when the order owner is meant to
+  `demo.redhat.com/userinfo: ""` is meant to pass its data keys to the order
+  owner (URLs, access notes). The Field Sourced Content - OpenShift Base order
+  did not show it (2026-11-06; cause not established, and the workload does
+  not wait for Argo CD to sync), so the
+  facilitator page also gives the Showroom URL:
+  `https://showroom-<showroom namespace>.<apps domain>`.
+- **Logging in.** That order replaces kubeadmin with Keycloak SSO while it
+  provisions; a kubeadmin token taken early stops working. Use the `admin`
+  user from the order page for `make verify` and the live pass. Put credentials there only when the order owner is meant to
   see them.
+- **Secrets in the Application.** RHDP passes the LiteMaaS key, and on the
+  OpenShift Base order the cluster `admin` and Keycloak admin passwords, in
+  the `field-content` Application's Helm values, so anyone who can read
+  Applications in `openshift-gitops` sees them. The scaffold copies only
+  `litemaas` to the `lab-prereqs` child. A terminal granted
+  `get` on Secret `litemaas` exposes it to anyone with the Showroom URL, and a
+  terminal that can create pods can mount any Secret in that namespace. Say
+  both on the facilitator page.
 
 ## Pick a pattern
 
@@ -61,7 +93,8 @@ this list before the first push.
 **Rewire**
 
 - **Playbook source.** Point `ansible.repository.url` and `branch` at the
-  lab's own repo (the parent's `gitops.repoUrl` and `gitops.revision`), and
+  lab's own repo (the parent's `gitops.repoURL | default gitops.repoUrl`, as
+  `applications.yaml` computes it, and `gitops.revision`), and
   `path` at `<gitops.basePath>/components/<name>/playbooks`, where the copied
   `site.yml` lives. Otherwise the Job runs upstream's demo playbook. It clones the
   branch tip, so the revision should be the branch Argo CD syncs.
