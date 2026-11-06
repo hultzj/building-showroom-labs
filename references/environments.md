@@ -133,7 +133,10 @@ reused test cluster.
   `Managed`; enable the components the lab needs (`kserve`,
   `modelregistry`, `trustyai`, …) as a facilitator step, and check them in
   `verify.sh`.
-- **No GPU.** Add a node from a worker MachineSet if the lab needs one.
+- **No GPU.** If the lab needs one, copy a worker MachineSet, change its
+  instance type to a GPU type (for example AWS `g6.2xlarge`, one NVIDIA L4),
+  add the taint the lab expects (such as `nvidia.com/gpu=True:NoSchedule`)
+  and scale it to one; an ordinary worker adds no GPU.
 - **Several replicas.** Gateways scale out (ten inference-gateway pods were
   seen); read logs by label (`oc logs -l … --max-log-requests=20`), never
   the first pod by name.
