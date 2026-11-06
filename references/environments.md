@@ -127,8 +127,9 @@ reused test cluster.
   Python 3.13 accept that partial chain; Python 3.12 (the OpenShift AI
   workbench image) and `openssl verify` do not. Build the bundle a client
   verifies with from the system CAs plus that chain:
-  `{ cat /etc/pki/tls/certs/ca-bundle.crt; oc get configmap default-ingress-cert -n openshift-config-managed -o jsonpath='{.data.ca-bundle\.crt}'; } > ~/ingress-ca.crt`.
-  Self-signed ingress keeps working.
+  `{ cat /etc/pki/tls/certs/ca-bundle.crt && oc get configmap default-ingress-cert -n openshift-config-managed -o jsonpath='{.data.ca-bundle\.crt}'; } > ~/ingress-ca.crt`.
+  The `&&` makes the block fail if the system bundle is missing. Self-signed
+  ingress keeps working.
 - **OpenShift AI base workload.** Only `dashboard` and `workbenches` are
   `Managed`; enable the components the lab needs (`kserve`,
   `modelregistry`, `trustyai`, …) as a facilitator step, and check them in
@@ -138,7 +139,8 @@ reused test cluster.
   add the taint the lab expects (such as `nvidia.com/gpu=True:NoSchedule`)
   and scale it to one; an ordinary worker adds no GPU.
 - **Several replicas.** Gateways scale out (ten inference-gateway pods were
-  seen); read logs by label (`oc logs -l … --max-log-requests=20`), never
+  seen); read logs by label (`oc logs -l … --tail=50 --max-log-requests=20`;
+  with `-l`, `oc logs` defaults to ten lines per pod), never
   the first pod by name.
 - **Web Terminal idles out.** A session with no keystrokes stops after 15
   minutes even while a command runs, and the workspace is stopped. For long
