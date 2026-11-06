@@ -40,6 +40,7 @@ cat > "$fake/oc" <<'SH'
 #!/usr/bin/env bash
 case "$*" in
   *"applications.argoproj.io field-content "*) [[ -n ${FAKE_NO_RHDP:-} ]] || printf 'application.argoproj.io/field-content' ;;
+  *"applications.argoproj.io CHANGE-ME-lab "*) [[ -n ${FAKE_BOOT:-} ]] && printf 'application.argoproj.io/CHANGE-ME-lab' ;;
   *applications.argoproj.io*) printf '%b' "$FAKE_APPS" ;;
   *route*) [[ -n ${FAKE_NO_ROUTE:-} ]] && exit 1; printf 'showroom.example.test' ;;
 esac
@@ -86,6 +87,10 @@ FAKE_APPS=$rhdp PATH="$fake:$PATH" LAB_NS=ns env -u LAB_APP bash "$SCAFFOLD/auto
 FAKE_NO_RHDP=1 FAKE_APPS='CHANGE-ME-lab Synced/Healthy CHANGE-ME-lab\nCHANGE-ME-lab-showroom Synced/Healthy CHANGE-ME-lab\n' \
   PATH="$fake:$PATH" LAB_NS=ns env -u LAB_APP bash "$SCAFFOLD/automation/verify.sh" >/dev/null 2>&1 \
   && ok "verify falls back to the bootstrap name without an RHDP parent" || bad "verify falls back to the bootstrap name without an RHDP parent"
+# A healthy bootstrap install is not hidden by an unrelated field-content Application.
+FAKE_BOOT=1 FAKE_APPS='CHANGE-ME-lab Synced/Healthy CHANGE-ME-lab\nCHANGE-ME-lab-showroom Synced/Healthy CHANGE-ME-lab\nfield-content OutOfSync/Degraded\n' \
+  PATH="$fake:$PATH" LAB_NS=ns env -u LAB_APP bash "$SCAFFOLD/automation/verify.sh" >/dev/null 2>&1 \
+  && ok "an unrelated field-content does not hide the bootstrap parent" || bad "an unrelated field-content does not hide the bootstrap parent"
 FAKE_NO_RHDP=1 FAKE_APPS=$rhdp PATH="$fake:$PATH" LAB_NS=ns env -u LAB_APP bash "$SCAFFOLD/automation/verify.sh" >/dev/null 2>&1 \
   && bad "without an RHDP parent, field-content Applications do not satisfy verify" || ok "without an RHDP parent, field-content Applications do not satisfy verify"
 
